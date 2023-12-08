@@ -10,7 +10,9 @@ QUESTION = "What happens to you if you eat watermelon seeds?"
 PARSER = "html.parser"
 
 def get_reddit_answers(question):
-    driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()))
+    options = webdriver.ChromeOptions()
+    options.add_argument("headless")
+    driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
     url = f'{BASE_URL}/search/?q={question.replace(" ", "+")}'
     reddit_responses_request = requests.get(url)
 
@@ -23,9 +25,14 @@ def get_reddit_answers(question):
         driver.get(post_url)
         html = BeautifulSoup(driver.page_source, "html.parser")
         result = html.find_all("div", {"id": "-post-rtjson-content"})
+        timestamps = html.find_all("time")
+        i = 0
         for item in result:
             print(item.text)
+            print(timestamps[i].text)
             print('--'*10)
+            i+=1
+        driver.quit()
 
 
 get_reddit_answers(QUESTION)
