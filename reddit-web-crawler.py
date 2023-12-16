@@ -1,20 +1,27 @@
 import requests
 from bs4 import BeautifulSoup
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service as ChromeService
 import pandas as pd
 import time
-from datasets import load_dataset
 import numpy as np
 import requests
-
+from datasets import load_dataset
+import re
 
 BASE_URL = "https://www.reddit.com"
-QUESTION = "What happens to you if you eat watermelon seeds?"
+#QUESTION = "What happens to you if you eat watermelon seeds?"
 PARSER = "html.parser"
 
 def get_hugging_data():
     return load_dataset("truthful_qa","generation")
+
+def remove_extra_spaces_and_emojis(text:str):
+    text = text.strip()
+    # Remove all whitespaces except single spaces
+    text = re.sub(r'\s+', ' ', text)
+    # Remove all emojis
+    text = re.sub(r'[^\w\s]', '', text)
+    return text
 
 def get_reddit_answers(question):
     answers = []
@@ -59,30 +66,18 @@ def get_reddit_answers(question):
     answers = np.array(answers).reshape(len(answers),1)
     timeStamps = np.array(timeStamps).reshape(len(timeStamps),1)
     answers_df = pd.DataFrame(answers, columns=["answers"])
+    answers_df = answers_df['answers'].apply(remove_extra_spaces_and_emojis)
     timestamps_df = pd.DataFrame(timeStamps, columns=["timeStamps"])
     timestamps_df = timestamps_df.apply(pd.to_datetime)
     combined_df = pd.concat([timestamps_df,answers_df], axis=1)
     return combined_df
 
-def run_check():
-    # Set the URL of the Hugging Face Hub resource you want to access
-    url = "https://huggingface.co/docs/transformers/master/en/main_classes/model"
-    # Make the GET request and store the response in a variable
-    response = requests.get(url)
-    # Check the status code of the response
-    if response.status_code == 200:
-        # The request was successful, so access the response content
-        data = response.json()
-        print(data)
-    else:
-        # The request was not successful, so raise an exception
-        raise Exception(f"Error accessing Hugging Face Hub: {response.status_code}")
 
 if  __name__ == "__main__":
-    
-    data = pd.DataFrame(get_hugging_data())
-    for i in range(len(data)):
+    data = pd.read_json(r"./misbelief-challenge/truthful_qa.json") 
+    for i in range(5):
         question = data['validation'][i]['question']
         answers_df = get_reddit_answers(question)
-
+        #what to do with all the answers to the questions?
+        answers_df.to_csv(f'./misbelief-challenge/answers/question_{i}.csv')
 
