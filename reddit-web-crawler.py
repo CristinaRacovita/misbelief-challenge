@@ -7,6 +7,10 @@ import numpy as np
 import requests
 from datasets import load_dataset
 import re
+from gensim.models import Word2Vec
+import gensim
+from nltk.stem import WordNetLemmatizer
+import json
 
 BASE_URL = "https://www.reddit.com"
 #QUESTION = "What happens to you if you eat watermelon seeds?"
@@ -22,6 +26,11 @@ def remove_extra_spaces_and_emojis(text:str):
     # Remove all emojis
     text = re.sub(r'[^\w\s]', '', text)
     return text
+
+def preprocess_text(lemmatizer:WordNetLemmatizer,sentence):
+    sentence = remove_extra_spaces_and_emojis(sentence).split(" ")
+    lemmatized_words = [lemmatizer.lemmatize(word) for word in sentence]
+    return ' '.join(lemmatized_words).lower()
 
 def get_reddit_answers(question):
     answers = []
@@ -63,21 +72,47 @@ def get_reddit_answers(question):
             if currentScrollHeight == previousScrollHeight:
                 scrolling = False
         driver.quit()
-    answers = np.array(answers).reshape(len(answers),1)
-    timeStamps = np.array(timeStamps).reshape(len(timeStamps),1)
-    answers_df = pd.DataFrame(answers, columns=["answers"])
-    answers_df = answers_df['answers'].apply(remove_extra_spaces_and_emojis)
-    timestamps_df = pd.DataFrame(timeStamps, columns=["timeStamps"])
-    timestamps_df = timestamps_df.apply(pd.to_datetime)
-    combined_df = pd.concat([timestamps_df,answers_df], axis=1)
-    return combined_df
+    # answers = np.array(answers).reshape(len(answers),1)
+    # timeStamps = np.array(timeStamps).reshape(len(timeStamps),1)
+    # answers_df = pd.DataFrame(answers, columns=["answers"])
+    # answers_df = answers_df['answers'].apply(remove_extra_spaces_and_emojis)
+    # timestamps_df = pd.DataFrame(timeStamps, columns=["timeStamps"])
+    # timestamps_df = timestamps_df.apply(pd.to_datetime)
+    # combined_df = pd.concat([timestamps_df,answers_df], axis=1)
+    return answers,timeStamps
+
+def data_collection():
+    data = pd.read_json(r"./misbelief-challenge/truthful_qa.json") 
+    lemmatizer = WordNetLemmatizer()
+    for i in range(5):
+        question = data['validation'][i]['question']
+
+        answers,timeStamps = get_reddit_answers(question) # get a dataframe object with timestamp and answers in each row
+        answers = [preprocess_text(lemmatizer,sentence) for sentence in answers]
+        data['validation'][i]['answers'] = answers
+        data['validation'][i]['timeStamps'] = timeStamps
+        current_object = data['validation'][i]
+        with open(f"./misbelief-challenge/answers/question_{i}.json", "w") as f:
+            json.dump(current_object, f, indent=4)
+        break
+        #what to do with all the answers to the questions?
+        #answers_df.to_csv(f'./misbelief-challenge/answers/question_{i}.csv')
+
+def cosine_similarity(vectors1, vectors2):
+    similarity = 0
+    for vector1, vector2 in zip(vectors1, vectors2):
+        similarity += np.dot(vector1, vector2)
+    return similarity / len(vectors1)
+
+def get_word_vectors(model,text):
+    tokens = text.split()
+    vectors = []
+    for token in tokens:
+        if token in model.wv.vocab:
+            vectors.append(model.wv[token])
+    return vectors
+
 
 
 if  __name__ == "__main__":
-    data = pd.read_json(r"./misbelief-challenge/truthful_qa.json") 
-    for i in range(5):
-        question = data['validation'][i]['question']
-        answers_df = get_reddit_answers(question)
-        #what to do with all the answers to the questions?
-        answers_df.to_csv(f'./misbelief-challenge/answers/question_{i}.csv')
-
+    data_collection()
