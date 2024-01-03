@@ -1,10 +1,11 @@
 import gensim
 from gensim.test.utils import common_texts
 import numpy as np
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.linear_model import LogisticRegression
+from transformers import AutoTokenizer, AutoModel
 import pandas as pd
 import os
+from nltk.tokenize import sent_tokenize, word_tokenize
+import gensim.downloader as downloader
 
 def count_files(directory):
     total_files = 0
@@ -22,39 +23,52 @@ def load_dataset(no_of_files,start=0):
     if start + no_of_files > total_files:
         raise Exception("Number of files requested exceeds the number of files that exist")
     df = pd.DataFrame()
-    print(file_paths)
     for i in range(start,no_of_files):
         file_path = file_paths[i]
         print(f"Reading file: {file_path}")
         temp_df = pd.read_json(file_path)
         df = pd.concat([df,temp_df],axis=1)
     return df
-# Load the dataset of questions and answers
+
+# training model on common_texts, questions, correct answers, incorrect answers and reddit answers
+def approach_1(df,col):
+    correct_answers = pd.Series(df[col]['correct_answers']).apply(lambda x: x.lower().split())
+    incorrect_answers = pd.Series(df[col]['incorrect_answers']).apply(lambda y: y.lower().split())
+    reddit_answers = pd.Series(df[col]['answers']).apply(lambda z: z.lower().split())
+    question = df[col]['question'][0].lower()
+    sentences = [question,*correct_answers,*incorrect_answers,*reddit_answers,*common_texts]
+    model = gensim.models.Word2Vec(workers=8, min_count=10, window=10, vector_size=300)
+    model.build_vocab(sentences)
+    model.train(sentences,total_examples=model.corpus_count, epochs=10)
+    return model, correct_answers, incorrect_answers, reddit_answers
+
+# using pretrained model
+def approach_2(df,col):
+    model = downloader.load("glove-wiki-gigaword-300")
+    correct_answers = pd.Series(df[col]['correct_answers']).apply(lambda x: model.get_mean_vector(x.lower().split()))
+    incorrect_answers = pd.Series(df[col]['incorrect_answers']).apply(lambda y: model.get_mean_vector(y.lower().split()))
+    # reddit answers are already in lowercase
+    reddit_answers = pd.Series(df[col]['answers']).apply(lambda z: model.get_mean_vector(z.split()))
+    return model, correct_answers, incorrect_answers, reddit_answers
+
+def cosine_similarity(correct_answer, reddit_answer):
+    return np.dot(correct_answer, reddit_answer) / (np.linalg.norm(correct_answer) * np.linalg.norm(reddit_answer))
+
+def similarity_criteria(correctness,incorrectness,threshold=0.7):
+    return 1 if sum([x > threshold for x in correctness]) > sum([y > threshold for y in incorrectness]) else 0
+
 def nlp_processing():
+    
     no_of_files = 2
     df = load_dataset(no_of_files)
-    vectorizer = TfidfVectorizer()
-    # Train Word2Vec models for each question
-    question_word2vec_models = []
-    for col in df.columns:
-        question = df[col]['question']
-        question_word2vec = gensim.models.Word2Vec(sentences=[question], size=100, min_count=2)
-        question_word2vec_models.append(question_word2vec)
-
-    for col in zip(df.columns,question_word2vec_models):
-        correct_answers = df[col]['correct_answers']
-        incorrect_answers = df[col]['incorrect_answers']
-        reddit_answers = df[col]['answers']
-
-def save_model():
-    model = gensim.models.Word2Vec(sentences=common_texts, vector_size=100, window=5, min_count=1, workers=4)
-    model.save("word2vec.model")
-
-def load_model():
-    model = gensim.models.Word2Vec.load(r"misbelief-challenge/word2vec.model")
-    print(model.wv['computer'])
+    for question in df.columns:
+        model, correct_answers, incorrect_answers, reddit_answers = approach_2(df,question)
+        for answer in reddit_answers:
+            # check similarity
+            correctness = [model.wv.similarity(answer,correct_ans) for correct_ans in correct_answers]
+            incorrectness = [model.wv.similarity(answer,incorrect_ans) for incorrect_ans in incorrect_answers]
+            answer_value = similarity_criteria(correctness,incorrectness)
+            print(answer_value)
 
 if __name__ == "__main__":
-    load_model()
-
-    
+    nlp_processing()
