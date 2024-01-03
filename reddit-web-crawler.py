@@ -93,7 +93,7 @@ def data_collection():
     data_store = {}
     total_count = len(data)
     batch_size = 20
-    for start in range(160,180,batch_size):
+    for start in range(180,200,batch_size):
         print(f"Current batch number: {start} - {start+batch_size}")
         for i in range(start,start+batch_size): # store answers batch wise into json files
             question = data['validation'][i]['question']
