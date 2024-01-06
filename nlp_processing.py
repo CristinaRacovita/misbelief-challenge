@@ -1,11 +1,17 @@
 import gensim
 from gensim.test.utils import common_texts
 import numpy as np
-from transformers import AutoTokenizer, AutoModel
+from InstructorEmbedding import INSTRUCTOR
 import pandas as pd
 import os
-from nltk.tokenize import sent_tokenize, word_tokenize
+import torch
 import gensim.downloader as downloader
+from sklearn.metrics.pairwise import cosine_similarity
+from torch.nn import CosineSimilarity
+from flair.embeddings import DocumentRNNEmbeddings, WordEmbeddings, TransformerDocumentEmbeddings, StackedEmbeddings
+from flair.embeddings import FlairEmbeddings
+from flair.data import Sentence
+
 
 def count_files(directory):
     total_files = 0
@@ -51,24 +57,79 @@ def approach_2(df,col):
     reddit_answers = pd.Series(df[col]['answers']).apply(lambda z: model.get_mean_vector(z.split()))
     return model, correct_answers, incorrect_answers, reddit_answers
 
-def cosine_similarity(correct_answer, reddit_answer):
-    return np.dot(correct_answer, reddit_answer) / (np.linalg.norm(correct_answer) * np.linalg.norm(reddit_answer))
-
-def similarity_criteria(correctness,incorrectness,threshold=0.7):
-    return 1 if sum([x > threshold for x in correctness]) > sum([y > threshold for y in incorrectness]) else 0
-
-def nlp_processing():
+def approach_3(df,col):
+    '''
+    The sentences to be embedded should be in the format of 
+    [["instruction prompt 0", "text to be embedded 0], ["instruction prompt 1", "text to be embedded 1], ...]
+    '''
+    '''
+    Model from: https://huggingface.co/hkunlp/instructor-large
+    '''
+    model = INSTRUCTOR('hkunlp/instructor-large')
+    correct_answers = pd.Series(df[col]['correct_answers'])
+    incorrect_answers = pd.Series(df[col]['incorrect_answers'])
+    reddit_answers = pd.Series(df[col]['answers'])
     
-    no_of_files = 2
+    correct_answers = correct_answers.apply(lambda x: model.encode(["Represent the correct answer:",x.lower()]))
+    incorrect_answers = incorrect_answers.apply(lambda y: model.encode(["Represent the incorrect answer:",y.lower()]))
+    # reddit answers are already in lowercase
+    reddit_answers = reddit_answers.apply(lambda z: model.encode(["Represent the reddit answer:",z]))
+    return correct_answers,incorrect_answers,reddit_answers
+
+def approach_4(df,col):
+    r'''Installed at: C:\Users\saran\AppData\Local\Temp\tmpwa4zvu1f'''
+    flair_embedding_forward = FlairEmbeddings('news-forward',fine_tune=True)
+    flair_embedding_backward = FlairEmbeddings('news-backward',fine_tune=True)
+    glove_embedding = WordEmbeddings('glove') # [ar,glove]
+
+    document_embeddings = DocumentRNNEmbeddings([glove_embedding],rnn_type='lstm')
+    # could possibly add more models, similarity scores tend to fall as more models are added
+    model = StackedEmbeddings([
+    document_embeddings,
+    flair_embedding_backward,
+    flair_embedding_forward
+    ])
+    correct_answers = [Sentence(x.lower()) for x in df[col]['correct_answers']]
+    incorrect_answers = [Sentence(y.lower()) for y in pd.Series(df[col]['incorrect_answers'])]
+    reddit_answers = [Sentence(z) for z in pd.Series(df[col]['answers'])]
+    model.embed([*correct_answers,*incorrect_answers,*reddit_answers])
+
+    return correct_answers, incorrect_answers, reddit_answers
+
+
+def similarity_criteria(correctness,incorrectness):
+    return 1 if max(correctness) > max(incorrectness) else 0
+
+def nlp_processing(): 
+    no_of_files = 1
     df = load_dataset(no_of_files)
+    cos = CosineSimilarity(dim=0)
     for question in df.columns:
-        model, correct_answers, incorrect_answers, reddit_answers = approach_2(df,question)
-        for answer in reddit_answers:
+        correct_answers, incorrect_answers, reddit_answers = approach_4(df,question)
+        for i in range(len(reddit_answers)):
             # check similarity
-            correctness = [model.wv.similarity(answer,correct_ans) for correct_ans in correct_answers]
-            incorrectness = [model.wv.similarity(answer,incorrect_ans) for incorrect_ans in incorrect_answers]
+            answer = reddit_answers[i]
+            correctness = [torch_similarity(answer,correct_ans,cos) for correct_ans in correct_answers]
+            incorrectness = [torch_similarity(answer,incorrect_ans,cos) for incorrect_ans in incorrect_answers]
             answer_value = similarity_criteria(correctness,incorrectness)
-            print(answer_value)
+            print(f"{df[question]['answers'][i]}: {answer_value}")
+        return
+
+def torch_similarity(sentence,sentence2,cos):
+    shape = sentence[0].embedding.shape
+    avg_1 = torch.zeros(shape)
+    avg_2 = torch.zeros(shape)
+    for token in  sentence:
+        avg_1 += token.embedding
+    for token in sentence2:
+        avg_2 += token.embedding
+    avg_1 /= shape[0]
+    avg_2 /= shape[0]
+    
+    return round(cos(avg_1,avg_2).item(),3)
 
 if __name__ == "__main__":
     nlp_processing()
+
+
+
