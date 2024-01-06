@@ -7,6 +7,8 @@ import os
 import torch
 import gensim.downloader as downloader
 from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.feature_extraction.text import TfidfVectorizer
+from nltk.corpus import stopwords
 from torch.nn import CosineSimilarity
 from flair.embeddings import DocumentRNNEmbeddings, WordEmbeddings, TransformerDocumentEmbeddings, StackedEmbeddings
 from flair.embeddings import FlairEmbeddings
@@ -96,21 +98,35 @@ def approach_4(df,col):
 
     return correct_answers, incorrect_answers, reddit_answers
 
+def approach_5(df,col):
+    # TF-IDF approach
+    correct_answers = pd.Series(df[col]['correct_answers']).apply(lambda x: x.lower())
+    incorrect_answers = pd.Series(df[col]['incorrect_answers']).apply(lambda y: y.lower())
+    reddit_answers = pd.Series(df[col]['answers'])
+    correct_vectorizer = TfidfVectorizer(ngram_range=(1, 2))
+    incorrect_vectorizer = TfidfVectorizer(ngram_range=(1, 2))
+    correct_matrix = correct_vectorizer.fit_transform(correct_answers).toarray()
+    incorrect_matrix = incorrect_vectorizer.fit_transform(incorrect_answers).toarray()
+    correctness = reddit_answers.apply(lambda x: correct_vectorizer.transform([x]).toarray())
+    incorrectness = reddit_answers.apply(lambda y: incorrect_vectorizer.transform([y]).toarray())
+    return correct_matrix, incorrect_matrix, correctness, incorrectness
 
 def similarity_criteria(correctness,incorrectness):
-    return 1 if max(correctness) > max(incorrectness) else 0
+    return 1 if np.max(correctness) > np.max(incorrectness) else 0
 
 def nlp_processing(): 
     no_of_files = 1
     df = load_dataset(no_of_files)
-    cos = CosineSimilarity(dim=0)
+    #cos = CosineSimilarity(dim=0)
     for question in df.columns:
-        correct_answers, incorrect_answers, reddit_answers = approach_4(df,question)
-        for i in range(len(reddit_answers)):
+        correct_matrix, incorrect_matrix, reddit_correct, reddit_incorrect = approach_5(df,question)
+    
+        for i in range(len(reddit_correct)):
             # check similarity
-            answer = reddit_answers[i]
-            correctness = [torch_similarity(answer,correct_ans,cos) for correct_ans in correct_answers]
-            incorrectness = [torch_similarity(answer,incorrect_ans,cos) for incorrect_ans in incorrect_answers]
+            correct_vector = reddit_correct[i]
+            incorrect_vector = reddit_incorrect[i]
+            correctness = [cosine_similarity(correct_ans.reshape(1,len(correct_ans)),correct_vector)[0] for correct_ans in correct_matrix]
+            incorrectness = [cosine_similarity(incorrect_ans.reshape(1,len(incorrect_ans)),incorrect_vector)[0] for incorrect_ans in incorrect_matrix]
             answer_value = similarity_criteria(correctness,incorrectness)
             print(f"{df[question]['answers'][i]}: {answer_value}")
         return

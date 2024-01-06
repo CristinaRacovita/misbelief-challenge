@@ -8,7 +8,7 @@ import requests
 from datasets import load_dataset
 import re
 from gensim.models import Word2Vec
-import gensim
+from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 import json
 
@@ -28,7 +28,7 @@ def remove_extra_spaces_and_emojis(text:str):
     return text
 
 def preprocess_text(lemmatizer:WordNetLemmatizer,sentence):
-    sentence = remove_extra_spaces_and_emojis(sentence).split(" ")
+    sentence = [word for word in remove_extra_spaces_and_emojis(sentence) if word not in stopwords.words('english')]
     lemmatized_words = [lemmatizer.lemmatize(word) for word in sentence]
     return ' '.join(lemmatized_words).lower()
 
@@ -93,7 +93,7 @@ def data_collection():
     data_store = {}
     total_count = len(data)
     batch_size = 20
-    for start in range(180,200,batch_size):
+    for start in range(200,220,batch_size):
         print(f"Current batch number: {start} - {start+batch_size}")
         for i in range(start,start+batch_size): # store answers batch wise into json files
             question = data['validation'][i]['question']
