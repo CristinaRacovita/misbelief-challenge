@@ -13,7 +13,7 @@ from torch.nn import CosineSimilarity
 from flair.embeddings import DocumentRNNEmbeddings, WordEmbeddings, TransformerDocumentEmbeddings, StackedEmbeddings
 from flair.embeddings import FlairEmbeddings
 from flair.data import Sentence
-
+import json
 
 def count_files(directory):
     total_files = 0
@@ -103,33 +103,52 @@ def approach_5(df,col):
     correct_answers = pd.Series(df[col]['correct_answers']).apply(lambda x: x.lower())
     incorrect_answers = pd.Series(df[col]['incorrect_answers']).apply(lambda y: y.lower())
     reddit_answers = pd.Series(df[col]['answers'])
-    correct_vectorizer = TfidfVectorizer(ngram_range=(1, 2))
-    incorrect_vectorizer = TfidfVectorizer(ngram_range=(1, 2))
-    correct_matrix = correct_vectorizer.fit_transform(correct_answers).toarray()
-    incorrect_matrix = incorrect_vectorizer.fit_transform(incorrect_answers).toarray()
-    correctness = reddit_answers.apply(lambda x: correct_vectorizer.transform([x]).toarray())
-    incorrectness = reddit_answers.apply(lambda y: incorrect_vectorizer.transform([y]).toarray())
-    return correct_matrix, incorrect_matrix, correctness, incorrectness
+    # correct_vectorizer = TfidfVectorizer(ngram_range=(1, 2))
+    # incorrect_vectorizer = TfidfVectorizer(ngram_range=(1, 2))
+    vectorizer = TfidfVectorizer(ngram_range=(1, 2))
+    # correct_matrix = correct_vectorizer.fit_transform(correct_answers).toarray()
+    # incorrect_matrix = incorrect_vectorizer.fit_transform(incorrect_answers).toarray()
+    all_answers = pd.concat([correct_answers,incorrect_answers])
+    matrix = vectorizer.fit_transform(all_answers)
+    correct_matrix = matrix[:len(df[col]['correct_answers']), :]
+    incorrect_matrix = matrix[len(df[col]['correct_answers']):, :]
+    # correctness = reddit_answers.apply(lambda x: correct_vectorizer.transform([x]).toarray())
+    # incorrectness = reddit_answers.apply(lambda y: incorrect_vectorizer.transform([y]).toarray())
+    reddit_matrix = vectorizer.transform(reddit_answers)
+    return correct_matrix, incorrect_matrix, reddit_matrix #correctness, incorrectness
 
 def similarity_criteria(correctness,incorrectness):
     return 1 if np.max(correctness) > np.max(incorrectness) else 0
 
-def nlp_processing(): 
-    no_of_files = 1
-    df = load_dataset(no_of_files)
+def series_to_json(series:pd.Series,attribute_name,attribute_val):
+    """Converts a Pandas Series object to a JSON object and adds an attribute to it"""
+    json_object = {}
+    for index, value in series.items():
+        json_object[index] = value
+    json_object[attribute_name] = attribute_val
+    return json_object
+
+def nlp_processing(batch_start,batch_end): 
+    file_path = f"misbelief-challenge/answers/answers_{batch_start}-{batch_end}.json"
+    df = pd.read_json(file_path)
+    data_store = {}
     #cos = CosineSimilarity(dim=0)
     for question in df.columns:
-        correct_matrix, incorrect_matrix, reddit_correct, reddit_incorrect = approach_5(df,question)
-    
-        for i in range(len(reddit_correct)):
+        answer_vector = []
+        correct_matrix, incorrect_matrix, reddit_matrix = approach_5(df,question)
+        for i in range(reddit_matrix.shape[0]):
             # check similarity
-            correct_vector = reddit_correct[i]
-            incorrect_vector = reddit_incorrect[i]
-            correctness = [cosine_similarity(correct_ans.reshape(1,len(correct_ans)),correct_vector)[0] for correct_ans in correct_matrix]
-            incorrectness = [cosine_similarity(incorrect_ans.reshape(1,len(incorrect_ans)),incorrect_vector)[0] for incorrect_ans in incorrect_matrix]
-            answer_value = similarity_criteria(correctness,incorrectness)
-            print(f"{df[question]['answers'][i]}: {answer_value}")
-        return
+            # correct_vector = reddit_correct[i]
+            # incorrect_vector = reddit_incorrect[i]
+            reddit_ans = reddit_matrix[i]
+            correctness = [cosine_similarity(correct_ans,reddit_ans)[0] for correct_ans in correct_matrix]
+            incorrectness = [cosine_similarity(incorrect_ans,reddit_ans)[0] for incorrect_ans in incorrect_matrix]
+            answer_vector.append(similarity_criteria(correctness,incorrectness))
+        #df[question]['predicted_answers'] = answer_vector
+        data_store[question] = series_to_json(df[question],"predicted_answers",answer_vector)
+    with open(file_path, 'w') as f:
+        json.dump(data_store, f, indent=4)
+            
 
 def torch_similarity(sentence,sentence2,cos):
     shape = sentence[0].embedding.shape
@@ -145,7 +164,7 @@ def torch_similarity(sentence,sentence2,cos):
     return round(cos(avg_1,avg_2).item(),3)
 
 if __name__ == "__main__":
-    nlp_processing()
+    nlp_processing(20,40)
 
 
 

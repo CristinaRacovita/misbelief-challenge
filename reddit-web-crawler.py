@@ -28,11 +28,11 @@ def remove_extra_spaces_and_emojis(text:str):
     return text
 
 def preprocess_text(lemmatizer:WordNetLemmatizer,sentence):
-    sentence = [word for word in remove_extra_spaces_and_emojis(sentence) if word not in stopwords.words('english')]
+    sentence = [word for word in remove_extra_spaces_and_emojis(sentence).split(" ") if word not in stopwords.words('english')]
     lemmatized_words = [lemmatizer.lemmatize(word) for word in sentence]
     return ' '.join(lemmatized_words).lower()
 
-def get_reddit_answers(question):
+def get_reddit_answers(question,top):
     answers = []
     timeStamps = []
     options = webdriver.ChromeOptions()
@@ -78,14 +78,8 @@ def get_reddit_answers(question):
                 if currentScrollHeight == previousScrollHeight:
                     scrolling = False
     driver.quit()
-    # answers = np.array(answers).reshape(len(answers),1)
-    # timeStamps = np.array(timeStamps).reshape(len(timeStamps),1)
-    # answers_df = pd.DataFrame(answers, columns=["answers"])
-    # answers_df = answers_df['answers'].apply(remove_extra_spaces_and_emojis)
-    # timestamps_df = pd.DataFrame(timeStamps, columns=["timeStamps"])
-    # timestamps_df = timestamps_df.apply(pd.to_datetime)
-    # combined_df = pd.concat([timestamps_df,answers_df], axis=1)
-    return answers[:50],timeStamps[:50]
+
+    return answers[:top],timeStamps[:top]
 
 def data_collection():
     data = pd.read_json(r"./misbelief-challenge/truthful_qa.json") 
@@ -93,12 +87,12 @@ def data_collection():
     data_store = {}
     total_count = len(data)
     batch_size = 20
-    for start in range(200,220,batch_size):
+    for start in range(220,240,batch_size):
         print(f"Current batch number: {start} - {start+batch_size}")
         for i in range(start,start+batch_size): # store answers batch wise into json files
             question = data['validation'][i]['question']
 
-            answers,timeStamps = get_reddit_answers(question) 
+            answers,timeStamps = get_reddit_answers(question,top=50) 
             # preprocess text before storing
             answers = [preprocess_text(lemmatizer,sentence) for sentence in answers]
             data['validation'][i]['answers'] = answers
@@ -109,23 +103,8 @@ def data_collection():
         with open(f"./misbelief-challenge/answers/answers_{start}-{start+batch_size}.json", "w") as f:
             json.dump(data_store, f, indent=4)
 
-        
-
-def cosine_similarity(vectors1, vectors2):
-    similarity = 0
-    for vector1, vector2 in zip(vectors1, vectors2):
-        similarity += np.dot(vector1, vector2)
-    return similarity / len(vectors1)
-
-def get_word_vectors(model,text):
-    tokens = text.split()
-    vectors = []
-    for token in tokens:
-        if token in model.wv.vocab:
-            vectors.append(model.wv[token])
-    return vectors
-
 
 
 if  __name__ == "__main__":
     data_collection()
+   
