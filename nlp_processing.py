@@ -103,15 +103,16 @@ def approach_5(df,col):
     correct_answers = pd.Series(df[col]['correct_answers']).apply(lambda x: x.lower())
     incorrect_answers = pd.Series(df[col]['incorrect_answers']).apply(lambda y: y.lower())
     reddit_answers = pd.Series(df[col]['answers'])
+    best_answer = pd.Series(df[col]['best_answer'])
     # correct_vectorizer = TfidfVectorizer(ngram_range=(1, 2))
     # incorrect_vectorizer = TfidfVectorizer(ngram_range=(1, 2))
     vectorizer = TfidfVectorizer(ngram_range=(1, 2))
     # correct_matrix = correct_vectorizer.fit_transform(correct_answers).toarray()
     # incorrect_matrix = incorrect_vectorizer.fit_transform(incorrect_answers).toarray()
-    all_answers = pd.concat([correct_answers,incorrect_answers])
+    all_answers = pd.concat([best_answer,correct_answers,incorrect_answers])
     matrix = vectorizer.fit_transform(all_answers)
-    correct_matrix = matrix[:len(df[col]['correct_answers']), :]
-    incorrect_matrix = matrix[len(df[col]['correct_answers']):, :]
+    correct_matrix = matrix[:len(df[col]['correct_answers'])+1, :]
+    incorrect_matrix = matrix[len(df[col]['correct_answers'])+1:, :]
     # correctness = reddit_answers.apply(lambda x: correct_vectorizer.transform([x]).toarray())
     # incorrectness = reddit_answers.apply(lambda y: incorrect_vectorizer.transform([y]).toarray())
     reddit_matrix = vectorizer.transform(reddit_answers)
