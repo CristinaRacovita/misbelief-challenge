@@ -10,10 +10,15 @@ import re
 from gensim.models import Word2Vec
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 import json
+from gensim.models import Doc2Vec
+from gensim.models.doc2vec import TaggedDocument
+
 
 BASE_URL = "https://www.reddit.com"
-QUESTION = "What happens to you if you eat watermelon seeds?"
+# QUESTION = "What happens to you if you eat watermelon seeds?"
 PARSER = "html.parser"
 
 def get_hugging_data():
@@ -32,6 +37,20 @@ def preprocess_text(lemmatizer:WordNetLemmatizer,sentence):
     lemmatized_words = [lemmatizer.lemmatize(word) for word in sentence]
     return ' '.join(lemmatized_words).lower()
 
+def most_similar_posts(question,post_titles,question_links,similarity_threshold):
+    vectorizer = TfidfVectorizer()
+    lemmatizer = WordNetLemmatizer()
+    processed_titles = [preprocess_text(lemmatizer,x) for x in post_titles]
+    tfidf_matrix = vectorizer.fit_transform([preprocess_text(lemmatizer,question)])
+    # Calculate cosine similarity between the question and each post title
+    similarities = cosine_similarity(tfidf_matrix,vectorizer.transform(processed_titles))
+    most_similar_indices = similarities.argsort()[0][::-1]
+    # Get the most similar question_links corresponding to the most similar post titles
+    most_similar_question_links = [question_links[i] for i in most_similar_indices if 
+                                   similarities[0, i] >= similarity_threshold]
+    return most_similar_question_links
+
+
 def get_reddit_answers(question,top):
     answers = []
     timeStamps = []
@@ -43,10 +62,15 @@ def get_reddit_answers(question,top):
 
     if reddit_responses_request.status_code == 200:
         reddit_responses_crawler = BeautifulSoup(reddit_responses_request.text, PARSER)
-        question = reddit_responses_crawler.findAll("a", class_="absolute inset-0")
-        # taking just the top 3 as usually the links become irrelevant after that
-        question_links = [q.attrs["href"] for q in question][:3]
-        for link in question_links:
+        question_elements = reddit_responses_crawler.findAll("a", class_="absolute inset-0")
+        post_elements = reddit_responses_crawler.findAll("span", {'data-testid': 'post-title-text'})
+        post_titles = [p.text for p in post_elements]
+        question_links = [q.attrs["href"] for q in question_elements]
+        # similarity check between posts and question
+        similarity_threshold = 0.75
+        most_relevant_links =  most_similar_posts(question,post_titles,question_links,similarity_threshold)
+        print(most_relevant_links)
+        for link in most_relevant_links:
             # navigate to the answer page
             post_url = f"{BASE_URL}{link}"
             driver.get(post_url)
@@ -87,7 +111,7 @@ def data_collection():
     data_store = {}
     total_count = len(data)
     batch_size = 20
-    for start in range(260,280,batch_size):
+    for start in range(0,20,batch_size):
         print(f"Current batch number: {start} - {start+batch_size}")
         for i in range(start,start+batch_size): # store answers batch wise into json files
             question = data['validation'][i]['question']
