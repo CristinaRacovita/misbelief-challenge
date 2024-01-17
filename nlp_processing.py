@@ -1,7 +1,6 @@
 import gensim
 from gensim.test.utils import common_texts
 import numpy as np
-from InstructorEmbedding import INSTRUCTOR
 import pandas as pd
 import os
 import torch
@@ -43,23 +42,29 @@ def approach_1(df,col):
     correct_answers = pd.Series(df[col]['correct_answers']).apply(lambda x: x.lower().split())
     incorrect_answers = pd.Series(df[col]['incorrect_answers']).apply(lambda y: y.lower().split())
     reddit_answers = pd.Series(df[col]['answers']).apply(lambda z: z.lower().split())
+    best_answer = df[col]['best_answer'][0].lower()
     question = df[col]['question'][0].lower()
-    sentences = [question,*correct_answers,*incorrect_answers,*reddit_answers,*common_texts]
+    sentences = [best_answer,question,*correct_answers,*incorrect_answers,*reddit_answers,*common_texts]
     model = gensim.models.Word2Vec(workers=8, min_count=10, window=10, vector_size=300)
     model.build_vocab(sentences)
     model.train(sentences,total_examples=model.corpus_count, epochs=10)
     return model, correct_answers, incorrect_answers, reddit_answers
 
 # using pretrained model
-def approach_2(df,col):
-    model = downloader.load("glove-wiki-gigaword-300")
-    correct_answers = pd.Series(df[col]['correct_answers']).apply(lambda x: model.get_mean_vector(x.lower().split()))
-    incorrect_answers = pd.Series(df[col]['incorrect_answers']).apply(lambda y: model.get_mean_vector(y.lower().split()))
+def approach_2(model,df,col):
+    correct_answers = pd.Series(df[col]['correct_answers']).apply(lambda x: model.get_mean_vector(x.lower().split()).reshape(-1, 1))
+    incorrect_answers = pd.Series(df[col]['incorrect_answers']).apply(lambda y: model.get_mean_vector(y.lower().split()).reshape(-1, 1))
     # reddit answers are already in lowercase
-    reddit_answers = pd.Series(df[col]['answers']).apply(lambda z: model.get_mean_vector(z.split()))
-    return model, correct_answers, incorrect_answers, reddit_answers
+    try:
+        reddit_answers = pd.Series(df[col]['answers']).apply(lambda z: model.get_mean_vector(z.split()).reshape(-1, 1))
+    except:
+        print("ANSWERS HERE!")
+        print(df[col]['answers'])
+        print(f"FOR QUESTION: {col}")
+        raise ValueError("cannot compute mean with no input")
+    return correct_answers, incorrect_answers, reddit_answers
 
-def approach_3(df,col):
+def approach_3(df,col,model):
     '''
     The sentences to be embedded should be in the format of 
     [["instruction prompt 0", "text to be embedded 0], ["instruction prompt 1", "text to be embedded 1], ...]
@@ -67,7 +72,6 @@ def approach_3(df,col):
     '''
     Model from: https://huggingface.co/hkunlp/instructor-large
     '''
-    model = INSTRUCTOR('hkunlp/instructor-large')
     correct_answers = pd.Series(df[col]['correct_answers'])
     incorrect_answers = pd.Series(df[col]['incorrect_answers'])
     reddit_answers = pd.Series(df[col]['answers'])
@@ -103,16 +107,15 @@ def approach_5(df,col):
     correct_answers = pd.Series(df[col]['correct_answers']).apply(lambda x: x.lower())
     incorrect_answers = pd.Series(df[col]['incorrect_answers']).apply(lambda y: y.lower())
     reddit_answers = pd.Series(df[col]['answers'])
-    best_answer = pd.Series(df[col]['best_answer'])
     # correct_vectorizer = TfidfVectorizer(ngram_range=(1, 2))
     # incorrect_vectorizer = TfidfVectorizer(ngram_range=(1, 2))
     vectorizer = TfidfVectorizer(ngram_range=(1, 2))
     # correct_matrix = correct_vectorizer.fit_transform(correct_answers).toarray()
     # incorrect_matrix = incorrect_vectorizer.fit_transform(incorrect_answers).toarray()
-    all_answers = pd.concat([best_answer,correct_answers,incorrect_answers])
+    all_answers = pd.concat([correct_answers,incorrect_answers])
     matrix = vectorizer.fit_transform(all_answers)
-    correct_matrix = matrix[:len(df[col]['correct_answers'])+1, :]
-    incorrect_matrix = matrix[len(df[col]['correct_answers'])+1:, :]
+    correct_matrix = matrix[:len(df[col]['correct_answers']), :]
+    incorrect_matrix = matrix[len(df[col]['correct_answers']):, :]
     # correctness = reddit_answers.apply(lambda x: correct_vectorizer.transform([x]).toarray())
     # incorrectness = reddit_answers.apply(lambda y: incorrect_vectorizer.transform([y]).toarray())
     reddit_matrix = vectorizer.transform(reddit_answers)
