@@ -116,39 +116,11 @@ def get_approach_4_model():
     ])
     return model
 
-def run_approach(approach: str, df, col, true_value, model=None):
-    if approach == "approach_2":
-        return run_approach_2(df, col, true_value, model)
-    elif approach == "approach_3":
-        return run_approach_3(df, col, true_value, model)
-    elif approach == "approach_4":
-        return run_approach_4(df, col, true_value, model)
-    elif approach == "approach_5":
-        return run_approach_5(df, col, true_value)
-    else:
-        raise ValueError("Invalid approach")
-
-if __name__ == "__main__":
+def run_approach(approach):
     evaluation_set = pd.read_json(r"misbelief-challenge\evaluation\answers_evaluation.json")
     #approach_2_model = downloader.load("glove-wiki-gigaword-300")
     #approach_3_model = INSTRUCTOR('hkunlp/instructor-large')
     #approach_4_model = get_approach_4_model()
-
-    # data_store = {
-    # approach: {
-    #     question_index: run_approach(approach,evaluation_set, question_index, evaluation_set[question_index]['true_labels'], model)
-    #     for question_index in evaluation_set.columns if len(evaluation_set[question_index]['answers']) != 0
-    # }
-    # for approach, model in [
-    #     ('approach_2', approach_2_model),
-    #     ('approach_3', approach_3_model),
-    #     ('approach_4', approach_4_model),
-    #     ('approach_5', None) 
-    # ]
-    # }
-    # with open(r"misbelief-challenge\evaluation\evaluation_scores.json") as file:
-    #     json.dump(data_store,file,indent=4)
-    approach =  'approach_4'
     data_store = {approach:{}}
     for question_index in evaluation_set.columns:
         if len(evaluation_set[question_index]['answers']) != 0:
@@ -156,11 +128,35 @@ if __name__ == "__main__":
             # store the accuracy values from each approach
             # accuracy_dict_2 = run_approach_2(evaluation_set,question_index,true_value,approach_2_model)
             # accuracy_dict_3 = run_approach_3(evaluation_set,question_index,true_value,approach_3_model)
-            accuracy_dict = run_approach_4(evaluation_set,question_index,true_value)
+            if approach == "approach_2":
+                accuracy_dict = run_approach_2(evaluation_set,question_index,true_value,downloader.load("glove-wiki-gigaword-300"))
+            elif approach == "approach_3":
+                accuracy_dict = run_approach_3(evaluation_set,question_index,true_value,INSTRUCTOR('hkunlp/instructor-large'))
+            elif approach == "approach_4":
+                accuracy_dict = run_approach_4(evaluation_set,question_index,true_value)
+            else:
+                accuracy_dict = run_approach_4(evaluation_set,question_index,true_value)
+
             data_store[approach][question_index] = accuracy_dict
             #accuracy_dict_5 = run_approach_5(evaluation_set,question_index,true_value)
-    with open(r"misbelief-challenge\evaluation\evaluation_approach_4.json",'w') as file:
+    with open(f"misbelief-challenge\evaluation\evaluation_{approach}.json",'w') as file:
         json.dump(data_store,file,indent=4)
+
+def evaluate_approaches():
+    app_2 = pd.read_json("misbelief-challenge\evaluation\evaluation_approach_2.json")
+    app_3 = pd.read_json("misbelief-challenge\evaluation\evaluation_approach_3.json")
+    app_4 = pd.read_json("misbelief-challenge\evaluation\evaluation_approach_4.json")
+    app_5 = pd.read_json("misbelief-challenge\evaluation\evaluation_approach_5.json")
+    df = pd.concat([app_2,app_3,app_4,app_5],axis=1)
+    df.columns = ["Word2Vec","INSTRUCTOR","FlairEmbeddings","TF-IDF"]
+    # evaluate the mean correctness incorrectness and overall accuracy for each approach
+    correctness_accuracy = df.apply(lambda x: x.apply(lambda y: y['correctness_accuracy']).mean(), axis=0)
+    incorrectness_accuracy = df.apply(lambda x: x.apply(lambda y: y['incorrectness_accuracy']).mean(), axis=0)
+    overall_accuracy = df.apply(lambda x: x.apply(lambda y: y['overall_accuracy']).mean(), axis=0)
+    return correctness_accuracy, incorrectness_accuracy, overall_accuracy
+
+if __name__ == "__main__":
+    evaluate_approaches()
             
 
     

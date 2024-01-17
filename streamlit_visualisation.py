@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+from evaluation import evaluate_approaches
 import itertools
 import datetime
 
@@ -36,21 +37,26 @@ def visual_processing():
     checking_timeStamps_df = df.explode(['timeStamps'])
     st.write(f"Number of empty timeStamp values: {(checking_timeStamps_df['timeStamps'] == '').sum()}")
 
-    dimensions = pd.DataFrame(
-        data=[["Time"],["Question Category"],["Location"]],
-        columns = ["Dimensions"]  
-        )
-    facts = pd.DataFrame(
-        data=[["Number of Answers"],["Number of correct/incorrect answers"]],
-        columns = ["Facts"]  
-        )
-    col1, col2 = st.columns(2)
-    # Place the dimensions table in the first column
-    col1.header("Dimensions")
-    col1.table(dimensions)
-    # Place the facts table in the second column
-    col2.header("Facts")
-    col2.table(facts)
+    # dimensions = pd.DataFrame(
+    #     data=[["Time"],["Question Category"],["Location"]],
+    #     columns = ["Dimensions"]  
+    #     )
+    # facts = pd.DataFrame(
+    #     data=[["Number of Answers"],["Number of correct/incorrect answers"]],
+    #     columns = ["Facts"]  
+    #     )
+    # col1, col2 = st.columns(2)
+    # # Place the dimensions table in the first column
+    # col1.header("Dimensions")
+    # col1.table(dimensions)
+    # # Place the facts table in the second column
+    # col2.header("Facts")
+    # col2.table(facts)
+    
+    correctness, incorrectness, overall = evaluate_approaches()
+    st.bar_chart(data=correctness)
+    st.bar_chart(data=incorrectness)
+    st.bar_chart(data=overall)
 
     st.header(f"Answers distribution (in {no_of_files} files)")
     correct_answers = pd.DataFrame(df['predicted_answers'].apply(lambda x: sum(x)).values,
