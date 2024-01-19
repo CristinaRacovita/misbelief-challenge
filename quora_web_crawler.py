@@ -1,9 +1,11 @@
 from bs4 import BeautifulSoup
 from model.quora_answer import QuoraAnswer
+from processing.location_processing import get_country_from_location_element
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service as ChromeService
 from webdriver_manager.chrome import ChromeDriverManager
 import time
+from processing.time_processing import get_datetime
 
 BASE_URL = "https://www.quora.com"
 # QUESTION = "What happens to you if you eat watermelon seeds?"
@@ -48,21 +50,32 @@ def get_quora_answers_and_users(question):
     for comment in comments:
         if len(answers) > 3:
             break
-        answers.append(QuoraAnswer(comment.text, users[i]['href'], timestamps[i].text))
+        if len(answers) > i + 1 and timestamps[i] is None:
+            i+=1
+            continue
+        if len(users) < i + 1:
+            answers.append(QuoraAnswer(comment.text, None, str(get_datetime(timestamps[i].text))))
+        else:
+            answers.append(QuoraAnswer(comment.text, users[i]['href'], str(get_datetime(timestamps[i].text))))
         i+=1
 
     driver.quit()
     return answers
 
 def get_user_location(profile_url):
+    if profile_url == None:
+        return None
     driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
-    driver.get(profile_url)
+    try:
+        driver.get(profile_url)
+    except:
+        print(profile_url)
     html = BeautifulSoup(driver.page_source, "html.parser")
     locations = html.find_all("div", {"class": "q-text qu-truncateLines--2"})
     locs = []
     for location in locations:
         if 'Lived in' in location.text or 'Lives in' in location.text:
-            locs.append(location.text)
+            locs.append(get_country_from_location_element(location.text))
             # print(location.text)
     driver.quit()
     return locs
