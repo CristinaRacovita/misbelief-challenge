@@ -47,10 +47,14 @@ def visual_processing():
             if loc == 'Unknown':
                 unknown += 1
                 continue
+            if loc == "America":
+                location = "USA"
+            else:
+                location = loc
             if answer == 1:
-                loc_answer_correct[loc] += 1
+                loc_answer_correct[location] += 1
             elif answer == 0:
-                loc_answer_wrong[loc] += 1
+                loc_answer_wrong[location] += 1
 
     st.write("**How do our final data look?**")
     st.write(df.head())
@@ -112,7 +116,7 @@ def visual_processing():
 
     st.subheader("Answers based on Category")
     st.write(f"**Incorrect answers: By category**")
-    incorrect_categories_selected = st.multiselect(label='Select categories for incorrect answers',options=df['category'].unique())
+    incorrect_categories_selected = st.multiselect(label='Select categories for incorrect answers',options=df['category'].unique(), default=df["category"].unique()[0])
     if incorrect_categories_selected != []:
         temp_df = df.groupby("category")['predicted_answers'].sum().apply(lambda x: len(x)-sum(x)).to_frame().T[incorrect_categories_selected]
         st.bar_chart(temp_df.T)
@@ -120,7 +124,7 @@ def visual_processing():
         st.error("select a category")
 
     st.write(f"**Correct answers: By category**")
-    correct_categories_selected = st.multiselect(label='Select categories for correct answers',options=df['category'].unique())
+    correct_categories_selected = st.multiselect(label='Select categories for correct answers',options=df['category'].unique(), default=df["category"].unique()[0])
     if correct_categories_selected != []:
         temp_df = df.groupby("category")['predicted_answers'].sum().apply(lambda x: sum(x)).to_frame().T[correct_categories_selected]
         st.bar_chart(temp_df.T)
@@ -137,7 +141,7 @@ def visual_processing():
     bar_data_2 = grouped_temp_df.pivot_table(index='timeStamps', columns='category', values='predicted_answers', fill_value=0)
     st.bar_chart(bar_data_2,color=['#ffaa00',"#ffaa0088"])
 
-    sorted_loc_answer_correct = dict(sorted(loc_answer_correct.items(), key=lambda item: item[1], reverse=True))
+    sorted_loc_answer_correct = {k: v for k,v in sorted(loc_answer_correct.items(), key=lambda item: item[1], reverse=True)}
     sorted_loc_answer_wrong = dict(sorted(loc_answer_wrong.items(), key=lambda item: item[1], reverse=True)) 
 
     st.subheader("Location Analysis")
