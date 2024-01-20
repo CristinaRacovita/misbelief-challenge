@@ -116,7 +116,7 @@ def visual_processing():
 
     st.subheader("Answers based on Category")
     st.write(f"**Incorrect answers: By category**")
-    incorrect_categories_selected = st.multiselect(label='Select categories for incorrect answers',options=df['category'].unique(), default=df["category"].unique()[0])
+    incorrect_categories_selected = st.multiselect(label='Select categories for incorrect answers',options=df['category'].unique(), default=[df["category"].unique()[0], df["category"].unique()[1]])
     if incorrect_categories_selected != []:
         temp_df = df.groupby("category")['predicted_answers'].sum().apply(lambda x: len(x)-sum(x)).to_frame().T[incorrect_categories_selected]
         st.bar_chart(temp_df.T)
@@ -124,7 +124,7 @@ def visual_processing():
         st.error("select a category")
 
     st.write(f"**Correct answers: By category**")
-    correct_categories_selected = st.multiselect(label='Select categories for correct answers',options=df['category'].unique(), default=df["category"].unique()[0])
+    correct_categories_selected = st.multiselect(label='Select categories for correct answers',options=df['category'].unique(), default=[df["category"].unique()[0], df["category"].unique()[1]])
     if correct_categories_selected != []:
         temp_df = df.groupby("category")['predicted_answers'].sum().apply(lambda x: sum(x)).to_frame().T[correct_categories_selected]
         st.bar_chart(temp_df.T)
