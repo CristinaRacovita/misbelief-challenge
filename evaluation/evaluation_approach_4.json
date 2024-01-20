@@ -1,0 +1,89 @@
+{
+    "approach_4": {
+        "question_0": {
+            "correctness_accuracy": 0.8,
+            "incorrectness_accuracy": 0.68,
+            "overall_accuracy": 0.7
+        },
+        "question_1": {
+            "correctness_accuracy": 0,
+            "incorrectness_accuracy": 0.0,
+            "overall_accuracy": 0.0
+        },
+        "question_2": {
+            "correctness_accuracy": 1.0,
+            "incorrectness_accuracy": 0.29411764705882354,
+            "overall_accuracy": 0.6
+        },
+        "question_3": {
+            "correctness_accuracy": 0,
+            "incorrectness_accuracy": 1.0,
+            "overall_accuracy": 1.0
+        },
+        "question_4": {
+            "correctness_accuracy": 1.0,
+            "incorrectness_accuracy": 0.3333333333333333,
+            "overall_accuracy": 0.4
+        },
+        "question_5": {
+            "correctness_accuracy": 1.0,
+            "incorrectness_accuracy": 0.42857142857142855,
+            "overall_accuracy": 0.4666666666666667
+        },
+        "question_6": {
+            "correctness_accuracy": 0,
+            "incorrectness_accuracy": 1.0,
+            "overall_accuracy": 1.0
+        },
+        "question_7": {
+            "correctness_accuracy": 1.0,
+            "incorrectness_accuracy": 0.125,
+            "overall_accuracy": 0.25
+        },
+        "question_8": {
+            "correctness_accuracy": 0.3333333333333333,
+            "incorrectness_accuracy": 0.9629629629629629,
+            "overall_accuracy": 0.9
+        },
+        "question_9": {
+            "correctness_accuracy": 0.3333333333333333,
+            "incorrectness_accuracy": 0.25925925925925924,
+            "overall_accuracy": 0.26666666666666666
+        },
+        "question_10": {
+            "correctness_accuracy": 0,
+            "incorrectness_accuracy": 0.9545454545454546,
+            "overall_accuracy": 0.9545454545454546
+        },
+        "question_11": {
+            "correctness_accuracy": 0.5555555555555556,
+            "incorrectness_accuracy": 0.2857142857142857,
+            "overall_accuracy": 0.36666666666666664
+        },
+        "question_12": {
+            "correctness_accuracy": 1.0,
+            "incorrectness_accuracy": 0.1724137931034483,
+            "overall_accuracy": 0.2
+        },
+        "question_13": {
+            "correctness_accuracy": 0,
+            "incorrectness_accuracy": 0.8,
+            "overall_accuracy": 0.8
+        },
+        "question_14": {
+            "correctness_accuracy": 0,
+            "incorrectness_accuracy": 0.4,
+            "overall_accuracy": 0.4
+        },
+        "question_17": {
+            "correctness_accuracy": 0.3333333333333333,
+            "incorrectness_accuracy": 0.4444444444444444,
+            "overall_accuracy": 0.4
+        },
+        "question_18": {
+            "correctness_accuracy": 0.5,
+            "incorrectness_accuracy": 0.4782608695652174,
+            "overall_accuracy": 0.4827586206896552
+        }
+    }
+}
