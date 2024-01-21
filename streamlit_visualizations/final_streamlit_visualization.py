@@ -2,6 +2,7 @@ import sys
 import path
 dir = path.Path(__file__).abspath()
 sys.path.append(dir.parent)
+print(dir)
 import streamlit as st
 import pandas as pd
 from evaluation_methods import evaluate_approaches
