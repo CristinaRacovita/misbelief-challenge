@@ -9,8 +9,8 @@ from collections import defaultdict
 import matplotlib.pyplot as plt
 import plotly.express as px
 
-import pathlib
-code_dir = pathlib.Path(__file__).parent.resolve()
+# import pathlib
+# code_dir = pathlib.Path(__file__).parent.resolve()
 
 def convert_bin_to_time_interval(bin_range):
     bin_start, bin_end = bin_range
@@ -35,7 +35,7 @@ st.markdown('''
 ''')
 @st.cache_data
 def load_data(no_of_files):
-    file_paths = [r"../quora_answers/answers_test.json"]
+    file_paths = [r"quora_answers/answers_test.json"]
     # get timeStamp data and the answers vector for each question
     df = pd.concat([pd.read_json(f) for f in file_paths[:no_of_files]],axis=1).T
     return df
