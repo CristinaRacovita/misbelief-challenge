@@ -2,7 +2,6 @@ import sys
 import path
 dir = path.Path(__file__).abspath()
 sys.path.append(dir.parent)
-print("TEST",dir)
 import streamlit as st
 import pandas as pd
 from evaluation_methods import evaluate_approaches
@@ -16,6 +15,8 @@ def convert_bin_to_time_interval(bin_range):
     return time_interval
 
 st.header("Misbeliefs Around the World")
+
+st.write(dir)
 
 st.markdown('''
     **We analysed the most popular misbelif answers from Quora and Reddit. 
