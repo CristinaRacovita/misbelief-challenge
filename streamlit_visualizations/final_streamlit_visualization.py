@@ -1,7 +1,7 @@
 import sys
 import path
 
-sys.path.append(dir.parent.parent)
+sys.path.append(dir.parent)
 dir = path.Path(__file__).abspath()
 import streamlit as st
 import pandas as pd
