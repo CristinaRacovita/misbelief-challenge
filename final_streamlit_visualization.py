@@ -1,7 +1,3 @@
-# import sys
-# import path
-# dir = path.Path(__file__).abspath()
-# sys.path.append(dir.parent)
 import streamlit as st
 import pandas as pd
 from evaluation_methods import evaluate_approaches
@@ -9,18 +5,12 @@ from collections import defaultdict
 import matplotlib.pyplot as plt
 import plotly.express as px
 
-# import pathlib
-# code_dir = pathlib.Path(__file__).parent.resolve()
-
 def convert_bin_to_time_interval(bin_range):
     bin_start, bin_end = bin_range
     time_interval = str(int((bin_end - bin_start) // 600)) + " minutes"
     return time_interval
 
 st.header("Misbeliefs Around the World")
-
-st.write(dir)
-
 st.markdown('''
     **We analysed the most popular misbelif answers from Quora and Reddit. 
     We used the TruthfulQA dataset, where we had top superstitions in the world and a web crawler to retrive people's answers from two known forum websites.**
