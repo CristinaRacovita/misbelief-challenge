@@ -1,8 +1,7 @@
 import sys
 import path
-
-sys.path.append(dir.parent)
 dir = path.Path(__file__).abspath()
+sys.path.append(dir.parent.parent)
 import streamlit as st
 import pandas as pd
 from evaluation_methods import evaluate_approaches
