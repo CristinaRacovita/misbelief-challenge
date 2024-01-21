@@ -1,14 +1,13 @@
+import sys
+sys.append.path(dir.parent.parent)
+import path
+dir = path.Path(__file__).abspath()
 import streamlit as st
 import pandas as pd
 from evaluation_methods import evaluate_approaches
 from collections import defaultdict
 import matplotlib.pyplot as plt
 import plotly.express as px
-import sys
-import path
-
-dir = path.Path(__file__).abspath()
-sys.append.path(dir.parent.parent)
 
 def convert_bin_to_time_interval(bin_range):
     bin_start, bin_end = bin_range
