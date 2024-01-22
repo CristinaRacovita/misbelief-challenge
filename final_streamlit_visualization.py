@@ -68,7 +68,7 @@ def visual_processing():
     st.bar_chart(category_count)
 
     fig, ax = plt.subplots()
-    ax.pie(category_count.values(), labels=category_count.keys(), autopct='%1.1f%%', startangle=90)
+    ax.pie(category_count.values(), labels=category_count.keys(), autopct='%1.1f%%', startangle=0)
     ax.axis('equal') 
     ax.set_facecolor("#ffffff")
 
