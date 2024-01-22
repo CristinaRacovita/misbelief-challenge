@@ -25,7 +25,7 @@ st.markdown('''
 ''')
 @st.cache_data
 def load_data():
-    file_path = r"misbelief-challenge\main_df_processed.json"
+    file_path = r"main_df_processed.json"
     # get timeStamp data and the answers vector for each question
     df = pd.read_json(file_path).transpose()
     return df
@@ -78,13 +78,18 @@ def visual_processing():
 
     st.pyplot(fig)
 
-    category_answers = df[["category", "predicted_answers"]].to_numpy()
+    quora_category_answers = df[["category", "quora_predicted_answers"]].to_numpy()
+    reddit_category_answers = df[["category", "reddit_predicted_answers"]].to_numpy()
     cat_answer_correct = defaultdict(int)
     cat_answer_wrong = defaultdict(int)
 
-    for i in range(category_answers.shape[0]):
-        cat_answer_correct[category_answers[i][0]] = category_answers[i][1].count(1)
-        cat_answer_wrong[category_answers[i][0]] = category_answers[i][1].count(0)
+    for i in range(quora_category_answers.shape[0]):
+        cat_answer_correct[quora_category_answers[i][0]] = quora_category_answers[i][1].count(1)
+        cat_answer_wrong[quora_category_answers[i][0]] = quora_category_answers[i][1].count(0)
+
+    for i in range(reddit_category_answers.shape[0]):
+        cat_answer_correct[reddit_category_answers[i][0]] += reddit_category_answers[i][1].count(1)
+        cat_answer_wrong[reddit_category_answers[i][0]] += reddit_category_answers[i][1].count(0)
 
     sorted_cat_answer_correct = dict(sorted(cat_answer_correct.items(), key=lambda item: item[1], reverse=True))
     sorted_cat_answer_wrong = dict(sorted(cat_answer_wrong.items(), key=lambda item: item[1], reverse=True))

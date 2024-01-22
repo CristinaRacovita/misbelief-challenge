@@ -1,10 +1,10 @@
 import pandas as pd
 
 def evaluate_approaches():
-    app_2 = pd.read_json(r"misbelief-challenge\evaluation\evaluation_approach_2.json")
-    app_3 = pd.read_json(r"misbelief-challenge\evaluation\evaluation_approach_3.json")
-    app_4 = pd.read_json(r"misbelief-challenge\evaluation\evaluation_approach_4.json")
-    app_5 = pd.read_json(r"misbelief-challenge\evaluation\evaluation_approach_5.json")
+    app_2 = pd.read_json(r"evaluation/evaluation_approach_2.json")
+    app_3 = pd.read_json(r"evaluation/evaluation_approach_3.json")
+    app_4 = pd.read_json(r"evaluation/evaluation_approach_4.json")
+    app_5 = pd.read_json(r"evaluation/evaluation_approach_5.json")
     df = pd.concat([app_2,app_3,app_4,app_5],axis=1)
     df.columns = ["Word2Vec","INSTRUCTOR","FlairEmbeddings","TF-IDF"]
     # evaluate the mean correctness incorrectness and overall accuracy for each approach
