@@ -5,11 +5,6 @@ from collections import defaultdict
 import matplotlib.pyplot as plt
 import plotly.express as px
 
-def convert_bin_to_time_interval(bin_range):
-    bin_start, bin_end = bin_range
-    time_interval = str(int((bin_end - bin_start) // 600)) + " minutes"
-    return time_interval
-
 st.header("Misbeliefs Around the World")
 st.markdown('''
     **We analysed the most popular misbelif answers from *Quora* and *Reddit*. 
@@ -26,6 +21,7 @@ st.markdown('''
 @st.cache_data
 def load_data():
     file_path = r"main_df_processed.json"
+
     # get timeStamp data and the answers vector for each question
     df = pd.read_json(file_path).transpose()
     return df
@@ -78,6 +74,7 @@ def visual_processing():
 
     st.pyplot(fig)
 
+
     quora_category_answers = df[["category", "quora_predicted_answers"]].to_numpy()
     reddit_category_answers = df[["category", "reddit_predicted_answers"]].to_numpy()
     cat_answer_correct = defaultdict(int)
@@ -90,6 +87,7 @@ def visual_processing():
     for i in range(reddit_category_answers.shape[0]):
         cat_answer_correct[reddit_category_answers[i][0]] += reddit_category_answers[i][1].count(1)
         cat_answer_wrong[reddit_category_answers[i][0]] += reddit_category_answers[i][1].count(0)
+
 
     sorted_cat_answer_correct = dict(sorted(cat_answer_correct.items(), key=lambda item: item[1], reverse=True))
     sorted_cat_answer_wrong = dict(sorted(cat_answer_wrong.items(), key=lambda item: item[1], reverse=True))
@@ -124,8 +122,33 @@ def visual_processing():
                                     columns=["incorrect answers"]
                                     )
     bar_data_1 = pd.concat([correct_answers,incorrect_answers],axis=1)
-    # TODO: Increase the size of this plot
-    st.bar_chart(data=bar_data_1,color=['#ffaa00',"#ffaa0088"])
+    st.bar_chart(data=bar_data_1,color=['#ffaa00',"#ffaa0088"],height=500,width=1000)
+
+    st.subheader(f"Most incorrect questions")
+    most_incorrect_df = most_incorrect_df = pd.DataFrame({
+    "questions": df['question'].values,
+    "incorrect_count": total_incorrect
+    }).sort_values("incorrect_count",ascending=False).head()
+    fig = px.line(most_incorrect_df, x='questions', y='incorrect_count',
+                labels={'questions': 'Questions', 'incorrect_count': 'Incorrect Count'},
+                    line_shape='linear',  # Use linear line shape
+                    line_dash_sequence=["solid"],  # Use a solid line
+                    color_discrete_sequence=["#FF5733"]  # Custom line color
+                    )
+    st.plotly_chart(fig)
+
+    st.subheader(f"Most correct questions")
+    most_incorrect_df = most_incorrect_df = pd.DataFrame({
+    "questions": df['question'].apply(lambda x: x[:30]).values,
+    "correct_count": total_correct
+    }).sort_values("correct_count",ascending=False).head()
+    fig_2 = px.line(most_incorrect_df, x='questions', y='correct_count',
+                labels={'questions': 'Questions', 'correct_count': 'Correct Count'},
+                    line_shape='linear',  # Use linear line shape
+                    line_dash_sequence=["solid"],  # Use a solid line
+                    color_discrete_sequence=["#44AACC"]  # Custom line color
+                    )
+    st.plotly_chart(fig_2)
 
     st.subheader("Answers based on Category")
     st.write(f"**Incorrect answers: By category**")
