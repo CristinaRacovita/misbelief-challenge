@@ -68,8 +68,9 @@ def get_reddit_answers(question,top):
         question_links = [q.attrs["href"] for q in question_elements]
         # similarity check between posts and question
         similarity_threshold = 0.75
+        if len(post_titles) == 0: return [],[]
         most_relevant_links =  most_similar_posts(question,post_titles,question_links,similarity_threshold)
-        print(most_relevant_links)
+
         for link in most_relevant_links:
             # navigate to the answer page
             post_url = f"{BASE_URL}{link}"
@@ -88,9 +89,6 @@ def get_reddit_answers(question,top):
                         timeStamps.append(timeEntries[i]['datetime'])
                     except:
                         timeStamps.append("")
-                    # print(item.text)
-                    # print(timestamps[i].text)
-                    # print('--' * 10)
                     i += 1
 
                 # Execute JavaScript to scroll to the end of the page
@@ -102,27 +100,45 @@ def get_reddit_answers(question,top):
                 if currentScrollHeight == previousScrollHeight:
                     scrolling = False
     driver.quit()
-
-    return answers[:top],timeStamps[:top]
+    # remove duplicate answers 
+    top_answers = []
+    top_timeStamps = []
+    for i in range(len(answers)):
+        if answers[i] not in top_answers:
+            top_answers.append(answers[i])
+            top_timeStamps.append(timeStamps[i])
+    return top_answers[:top],top_timeStamps[:top]
 
 def data_collection():
-    data = pd.read_json(r"./misbelief-challenge/truthful_qa.json") 
+    relevant_categories = ["Misconceptions",
+                           "Conspiracies",
+                           "Stereotypes",
+                           "Confusion: People",
+                           "Superstitions",
+                           "Misquotations",
+                           "Mandela Effect",
+                           "Misinformation",
+                           "Confusion: Places",
+                           "Misconceptions: Topical"]
+    data = pd.read_json(r"./misbelief-challenge/truthful_qa.json")
     lemmatizer = WordNetLemmatizer()
     data_store = {}
     total_count = len(data)
     batch_size = 20
-    for start in range(0,20,batch_size):
+    for start in range(800,820,batch_size):
         print(f"Current batch number: {start} - {start+batch_size}")
         for i in range(start,start+batch_size): # store answers batch wise into json files
-            question = data['validation'][i]['question']
+            category_type = data['validation'][i]['category']
+            if category_type in relevant_categories: # filter out irrelevant categories
+                question = data['validation'][i]['question']
 
-            answers,timeStamps = get_reddit_answers(question,top=50) 
-            # preprocess text before storing
-            answers = [preprocess_text(lemmatizer,sentence) for sentence in answers]
-            data['validation'][i]['answers'] = answers
-            data['validation'][i]['timeStamps'] = timeStamps
-            #add data['validation'][i] to data_store with question_i as the index 
-            data_store[f'question_{i}'] = data['validation'][i]
+                answers,timeStamps = get_reddit_answers(question,top=30) 
+                # preprocess text before storing
+                answers = [preprocess_text(lemmatizer,sentence) for sentence in answers]
+                data['validation'][i]['answers'] = answers
+                data['validation'][i]['timeStamps'] = timeStamps
+                #add data['validation'][i] to data_store with question_i as the index 
+                data_store[f'question_{i}'] = data['validation'][i]
             
         with open(f"./misbelief-challenge/answers/answers_{start}-{start+batch_size}.json", "w") as f:
             json.dump(data_store, f, indent=4)
