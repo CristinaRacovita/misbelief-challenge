@@ -12,8 +12,8 @@ def convert_bin_to_time_interval(bin_range):
 
 st.header("Misbeliefs Around the World")
 st.markdown('''
-    **We analysed the most popular misbelif answers from Quora and Reddit. 
-    We used the [TruthfulQA](https://huggingface.co/datasets/truthful_qa) dataset, where we had top superstitions in the world and a web crawler to retrive people's answers from two known forum websites.**
+    **We analysed the most popular misbelif answers from *Quora* and *Reddit*. 
+    We used the [TruthfulQA](https://huggingface.co/datasets/truthful_qa) dataset, where there are the top superstitions in the world and a web crawler to retrive people's answers from two well-known forum websites.**
 ''')
 st.markdown('''
     **Business questions:**
