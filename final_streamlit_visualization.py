@@ -24,7 +24,7 @@ st.markdown('''
     - How many correct and incorrect answers do we have based on the location (country)?
 ''')
 @st.cache_data
-def load_data(no_of_files):
+def load_data():
     file_path = r"misbelief-challenge\main_df.json"
     # get timeStamp data and the answers vector for each question
     df = pd.read_json(file_path).transpose()
