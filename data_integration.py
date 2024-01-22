@@ -34,7 +34,6 @@ def reshape_df(df,df_type) -> pd.DataFrame:
     return result_df
 
 def merge_datasets():
-    # REDO
     # Data statistics
     reddit_df = load_reddit_answers().transpose().reset_index()
     reddit_mapper = {"answers":"reddit_answers","timeStamps":"reddit_timeStamps"}

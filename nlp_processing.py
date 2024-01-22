@@ -13,6 +13,8 @@ from flair.embeddings import DocumentRNNEmbeddings, WordEmbeddings, TransformerD
 from flair.embeddings import FlairEmbeddings
 from flair.data import Sentence
 import json
+from nltk.stem import WordNetLemmatizer
+from reddit_web_crawler import preprocess_text
 
 def count_files(directory):
     total_files = 0
@@ -145,7 +147,7 @@ def series_to_json(series:pd.Series,attribute_name,attribute_val):
     json_object[attribute_name] = attribute_val
     return json_object
 
-def nlp_processing(batch_start,batch_end): 
+def file_nlp_processing(batch_start,batch_end): 
     file_path = f"misbelief-challenge/answers/answers_{batch_start}-{batch_end}.json"
     df = pd.read_json(file_path)
     data_store = {}
@@ -167,8 +169,50 @@ def nlp_processing(batch_start,batch_end):
     with open(file_path, 'w') as f:
         json.dump(data_store, f, indent=4)
 
+def main_df_tfifd_approach(json_object,lemmatizer,forum):
+    correct_answers = pd.Series(json_object['correct_answers']).apply(lambda x: preprocess_text(lemmatizer,x))
+    incorrect_answers = pd.Series(json_object['incorrect_answers']).apply(lambda y: preprocess_text(lemmatizer,y))
+    answers = pd.Series(json_object[f'{forum}_answers'])
+    
+    vectorizer = TfidfVectorizer(ngram_range=(1, 2))
+    all_answers = pd.concat([correct_answers,incorrect_answers])
+    matrix = vectorizer.fit_transform(all_answers)
+
+    correct_matrix = matrix[:len(json_object['correct_answers']), :]
+    incorrect_matrix = matrix[len(json_object['correct_answers']):, :]
+
+    answers_matrix = vectorizer.transform(answers)
+
+    return correct_matrix, incorrect_matrix, answers_matrix
+
+def get_similarity(correct_matrix,incorrect_matrix,answer_vector):
+    correctness = [cosine_similarity(correct_ans,answer_vector)[0] for correct_ans in correct_matrix]
+    incorrectness = [cosine_similarity(incorrect_ans,answer_vector)[0] for incorrect_ans in incorrect_matrix]
+    return similarity_criteria(correctness,incorrectness)
+
+def main_df_processing():
+    file_path = r"misbelief-challenge\main_df.json"
+    main_df = pd.read_json(file_path,orient="records")
+    data_store = {}
+    lemmatizer = WordNetLemmatizer()
+    for i in range(main_df.shape[0]):
+        json_object = main_df.iloc[i,:]
+        reddit_vector = quora_vector = []
+        if len(json_object['reddit_answers']) != 0:
+            correct_matrix, incorrect_matrix, answers_matrix = main_df_tfifd_approach(json_object,lemmatizer,forum='reddit')
+            reddit_vector = [get_similarity(correct_matrix,incorrect_matrix,answer_vector) for answer_vector in answers_matrix]
+        if len(json_object['quora_answers']) != 0:
+            correct_matrix, incorrect_matrix, answers_matrix = main_df_tfifd_approach(json_object,lemmatizer,forum='quora')
+            quora_vector = [get_similarity(correct_matrix,incorrect_matrix,answer_vector) for answer_vector in answers_matrix]
+        json_object = series_to_json(json_object,"reddit_predicted_answers",reddit_vector)
+        json_object = series_to_json(json_object,"quora_predicted_answers",quora_vector)
+        data_store[json_object['index']] = json_object
+
+    with open(r"misbelief-challenge\main_df_processed.json","w") as file:
+        json.dump(data_store,file,indent=4)
+
 if __name__ == "__main__":
-    nlp_processing(0,20)
+    main_df_processing()
 
 
 
