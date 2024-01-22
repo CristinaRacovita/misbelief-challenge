@@ -4,6 +4,8 @@ from evaluation_methods import evaluate_approaches
 from collections import defaultdict
 import matplotlib.pyplot as plt
 import plotly.express as px
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 st.header("Misbeliefs Around the World")
 st.markdown('''
@@ -32,6 +34,31 @@ def visual_processing():
     empty_quora_timeStamps = (df.explode(['quora_timeStamps'])['quora_timeStamps'] == '').sum()
     locations_and_answers = df[["locations", "quora_predicted_answers"]].to_numpy()
 
+    num_reddit_answers = df.explode(["reddit_predicted_answers"]).shape[0]
+    num_quora_answers = df.explode(["quora_predicted_answers"]).shape[0]
+    num_correct_reddit_answers = df.explode(["reddit_predicted_answers"])['reddit_predicted_answers'].sum()
+    num_correct_quora_answers = df.explode(["quora_predicted_answers"])['quora_predicted_answers'].sum()
+    num_incorrect_reddit_answers = num_reddit_answers-num_correct_reddit_answers
+    num_incorrect_quora_answers = num_quora_answers-num_correct_quora_answers
+    unique_locations = df.explode(['locations'])['locations'].nunique()
+    unique_categories = df['category'].nunique()
+
+    answers_statistics = make_subplots(1, 3, specs=[[{'type': 'pie'}, {'type': 'pie'}, {'type': 'pie'}]])
+
+    answers_statistics.add_trace(go.Pie(labels=['Reddit', 'Quora'], 
+                         values=[num_reddit_answers, num_quora_answers],
+                         title='Total Questions'),
+                         1,1)
+    answers_statistics.add_trace(go.Pie(labels=['Reddit', 'Quora'], 
+                         values=[num_correct_reddit_answers, num_correct_quora_answers],
+                         title='Total Correct Questions'),
+                         1,2)
+    answers_statistics.add_trace(go.Pie(labels=['Reddit', 'Quora'], 
+    values=[num_incorrect_reddit_answers, num_incorrect_quora_answers],
+    title='Total Incorrect Questions'),
+    1,3)
+    answers_statistics.update_layout(title_text="Answers distribution between Quora and Reddit")
+
     loc_answer_correct = defaultdict(int)
     loc_answer_wrong = defaultdict(int)
     unknown = 0
@@ -59,7 +86,11 @@ def visual_processing():
            empty_quora_timeStamps + empty_reddit_timeStamps
             }
         - There are {unknown} unknown locations.
+        - Identified {unique_locations} unique locations.
+        - There are {unique_categories} categories.
     ''')
+    # Display the figure
+    st.plotly_chart(answers_statistics)
 
     st.subheader("Category Analysis")
     category_count = dict(df['category'].value_counts())
