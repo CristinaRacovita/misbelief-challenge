@@ -5,11 +5,6 @@ from collections import defaultdict
 import matplotlib.pyplot as plt
 import plotly.express as px
 
-def convert_bin_to_time_interval(bin_range):
-    bin_start, bin_end = bin_range
-    time_interval = str(int((bin_end - bin_start) // 600)) + " minutes"
-    return time_interval
-
 st.header("Misbeliefs Around the World")
 st.markdown('''
     **We analysed the most popular misbelif answers from Quora and Reddit. 
@@ -78,21 +73,21 @@ def visual_processing():
 
     st.pyplot(fig)
 
-    category_answers = df[["category", "predicted_answers"]].to_numpy()
-    cat_answer_correct = defaultdict(int)
-    cat_answer_wrong = defaultdict(int)
+    # category_answers = df[["category", "predicted_answers"]].to_numpy()
+    # cat_answer_correct = defaultdict(int)
+    # cat_answer_wrong = defaultdict(int)
 
-    for i in range(category_answers.shape[0]):
-        cat_answer_correct[category_answers[i][0]] = category_answers[i][1].count(1)
-        cat_answer_wrong[category_answers[i][0]] = category_answers[i][1].count(0)
+    # for i in range(category_answers.shape[0]):
+    #     cat_answer_correct[category_answers[i][0]] = category_answers[i][1].count(1)
+    #     cat_answer_wrong[category_answers[i][0]] = category_answers[i][1].count(0)
 
-    sorted_cat_answer_correct = dict(sorted(cat_answer_correct.items(), key=lambda item: item[1], reverse=True))
-    sorted_cat_answer_wrong = dict(sorted(cat_answer_wrong.items(), key=lambda item: item[1], reverse=True))
-    st.write("**Top Categories with Correct Answers**")
-    st.bar_chart(sorted_cat_answer_correct)
+    # sorted_cat_answer_correct = dict(sorted(cat_answer_correct.items(), key=lambda item: item[1], reverse=True))
+    # sorted_cat_answer_wrong = dict(sorted(cat_answer_wrong.items(), key=lambda item: item[1], reverse=True))
+    # st.write("**Top Categories with Correct Answers**")
+    # st.bar_chart(sorted_cat_answer_correct)
 
-    st.write("**Top Categories with Wrong Answers**")
-    st.bar_chart(sorted_cat_answer_wrong)
+    # st.write("**Top Categories with Wrong Answers**")
+    # st.bar_chart(sorted_cat_answer_wrong)
     
     correctness, incorrectness, overall = evaluate_approaches()
     st.subheader("NLP Models Analysis")
@@ -119,8 +114,11 @@ def visual_processing():
                                     columns=["incorrect answers"]
                                     )
     bar_data_1 = pd.concat([correct_answers,incorrect_answers],axis=1)
-    # TODO: Increase the size of this plot
-    st.bar_chart(data=bar_data_1,color=['#ffaa00',"#ffaa0088"])
+    st.bar_chart(data=bar_data_1,color=['#ffaa00',"#ffaa0088"],height=500,width=1000)
+
+    st.subheader(f"Most incorrect questions")
+    most_incorrect_df = pd.DataFrame(data=total_incorrect,columns=["incorrect_count"],index=df['question']).sort_values("incorrect_count",ascending=False)
+    st.line_chart(most_incorrect_df)
 
     st.subheader("Answers based on Category")
     st.write(f"**Incorrect answers: By category**")
