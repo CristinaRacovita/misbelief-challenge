@@ -25,7 +25,7 @@ st.markdown('''
 ''')
 @st.cache_data
 def load_data():
-    file_path = r"misbelief-challenge\main_df.json"
+    file_path = r"misbelief-challenge\main_df_processed.json"
     # get timeStamp data and the answers vector for each question
     df = pd.read_json(file_path).transpose()
     return df
@@ -33,8 +33,9 @@ def load_data():
 
 def visual_processing():
     df = load_data()
-    checking_timeStamps_df = df.explode(['timeStamps'])
-    locations_and_answers = df[["locations", "predicted_answers"]].to_numpy()
+    empty_reddit_timeStamps = (df.explode(['reddit_timeStamps'])['reddit_timeStamps'] == '').sum()
+    empty_quora_timeStamps = (df.explode(['quora_timeStamps'])['quora_timeStamps'] == '').sum()
+    locations_and_answers = df[["locations", "quora_predicted_answers"]].to_numpy()
 
     loc_answer_correct = defaultdict(int)
     loc_answer_wrong = defaultdict(int)
@@ -55,11 +56,13 @@ def visual_processing():
                 loc_answer_wrong[location] += 1
 
     st.write("**How do our final data look?**")
-    st.write(df.head())
+    st.write(df.iloc[:df.shape[0],:5])
 
     st.markdown(f'''
         **Data Statistics**
-        - Number of empty timeStamp values: {(checking_timeStamps_df['timeStamps'] == '').sum()}
+        - Number of empty timeStamp values: {
+           empty_quora_timeStamps + empty_reddit_timeStamps
+            }
         - There are {unknown} unknown locations.
     ''')
 
@@ -101,43 +104,77 @@ def visual_processing():
     st.bar_chart(data=overall)
 
     st.subheader(f"Answer Distributions")
-    correct_answers = pd.DataFrame(df['predicted_answers'].apply(lambda x: sum(x)).values,
+    reddit_correct_answers = df['reddit_predicted_answers'].apply(lambda x: sum(x)).values
+    quora_correct_answers = df['quora_predicted_answers'].apply(lambda x: sum(x)).values
+    reddit_incorrect_answers = df['reddit_predicted_answers'].apply(lambda x:len(x)-sum(x)).values
+    quora_incorrect_answers = df['quora_predicted_answers'].apply(lambda x:len(x)-sum(x)).values
+    total_correct = reddit_correct_answers + quora_correct_answers
+    total_incorrect = reddit_incorrect_answers + quora_incorrect_answers
+    correct_answers = pd.DataFrame(total_correct,
                                    index=df['question'],
                                    columns=["correct answers"]
                                    )
-    incorrect_answers = pd.DataFrame(df['predicted_answers'].apply(lambda x: len(x)-sum(x)).values,
+    incorrect_answers = pd.DataFrame(total_incorrect,
                                     index=df['question'],
                                     columns=["incorrect answers"]
                                     )
     bar_data_1 = pd.concat([correct_answers,incorrect_answers],axis=1)
+    # TODO: Increase the size of this plot
     st.bar_chart(data=bar_data_1,color=['#ffaa00',"#ffaa0088"])
 
     st.subheader("Answers based on Category")
     st.write(f"**Incorrect answers: By category**")
+    reddit_incorrect_grouped = df.groupby("category")['reddit_predicted_answers'].\
+        sum().apply(lambda x: len(x)-sum(x)).to_frame().T
+    quora_incorrect_grouped = df.groupby("category")['quora_predicted_answers'].\
+        sum().apply(lambda x: len(x)-sum(x)).to_frame().T
     incorrect_categories_selected = st.multiselect(label='Select categories for incorrect answers',options=df['category'].unique(), default=[df["category"].unique()[0], df["category"].unique()[1]])
     if incorrect_categories_selected != []:
-        temp_df = df.groupby("category")['predicted_answers'].sum().apply(lambda x: len(x)-sum(x)).to_frame().T[incorrect_categories_selected]
-        st.bar_chart(temp_df.T)
+        reddit_incorrect_grouped = reddit_incorrect_grouped[incorrect_categories_selected]
+        quora_incorrect_grouped = quora_incorrect_grouped[incorrect_categories_selected]
+        temp_df = pd.concat([reddit_incorrect_grouped,quora_incorrect_grouped],axis=1)
+        temp_df = temp_df.T.rename({"reddit_predicted_answers":"reddit_incorrect","quora_predicted_answers":"quora_incorrect"},axis=1)
+        st.bar_chart(temp_df)
     else:
         st.error("select a category")
 
     st.write(f"**Correct answers: By category**")
     correct_categories_selected = st.multiselect(label='Select categories for correct answers',options=df['category'].unique(), default=[df["category"].unique()[0], df["category"].unique()[1]])
+    reddit_incorrect_grouped = df.groupby("category")['reddit_predicted_answers'].\
+        sum().apply(lambda x: sum(x)).to_frame().T
+    quora_incorrect_grouped = df.groupby("category")['quora_predicted_answers'].\
+        sum().apply(lambda x: sum(x)).to_frame().T
     if correct_categories_selected != []:
-        temp_df = df.groupby("category")['predicted_answers'].sum().apply(lambda x: sum(x)).to_frame().T[correct_categories_selected]
-        st.bar_chart(temp_df.T)
+        reddit_incorrect_grouped = reddit_incorrect_grouped[incorrect_categories_selected]
+        quora_incorrect_grouped = quora_incorrect_grouped[incorrect_categories_selected]
+        temp_df = pd.concat([reddit_incorrect_grouped,quora_incorrect_grouped],axis=1)
+        temp_df = temp_df.T.rename({"reddit_predicted_answers":"reddit_correct","quora_predicted_answers":"quora_correct"},axis=1)
+        st.bar_chart(temp_df)
     else:
         st.error("select a category")
 
-    # Popular misbelief based on timestamp year by category
-    st.subheader("Popular misbelief based on timestamp year by category")
-    temp_df = df.explode(['predicted_answers','timeStamps'])
+    colors = ['#1f78b4', '#33a02c', '#e31a1c', '#ff7f00', '#6a3d9a', '#a6cee3', '#b2df8a', '#fb9a99', '#fdbf6f', '#cab2d6']
+    # Popular misbeliefs from reddit based on timestamp year by category
+    st.subheader("Popular misbelief from **reddit** based on timestamp year by category")
+    temp_df = df.explode(['reddit_predicted_answers','reddit_timeStamps'])
     replacement_year = pd.to_datetime("2020-10-27T14:13:12.111Z").year # need a better way to do this 
-    temp_df['timeStamps'] = temp_df['timeStamps'].apply(lambda x: pd.to_datetime(x).year if x != "" and x != "None" else replacement_year)
+    temp_df['timeStamps'] = temp_df['reddit_timeStamps'].apply(lambda x: pd.to_datetime(x).year if x != "" and x != "None" else replacement_year)
     # group by timeStamp
-    grouped_temp_df = temp_df.groupby(['timeStamps','category'])['predicted_answers'].apply(lambda x: (x == 0).sum()).to_frame()
-    bar_data_2 = grouped_temp_df.pivot_table(index='timeStamps', columns='category', values='predicted_answers', fill_value=0)
-    st.bar_chart(bar_data_2,color=['#ffaa00',"#ffaa0088"])
+    grouped_temp_df = temp_df.groupby(['timeStamps','category'])['reddit_predicted_answers'].apply(lambda x: (x == 0).sum()).to_frame()
+    reddit_bar_data = grouped_temp_df.pivot_table(index='timeStamps', columns='category', values='reddit_predicted_answers', fill_value=0)
+    # TODO: INCREASE FIGSIZE
+    st.bar_chart(reddit_bar_data,color = colors[:len(reddit_bar_data.columns)])
+
+    # Popular misbeliefs from quora based on timestamp year by category
+    st.subheader("Popular misbelief from **quora** based on timestamp year by category")
+    temp_df = df.explode(['quora_predicted_answers','quora_timeStamps'])
+    replacement_year = pd.to_datetime("2020-10-27T14:13:12.111Z").year # need a better way to do this 
+    temp_df['timeStamps'] = temp_df['quora_timeStamps'].apply(lambda x: pd.to_datetime(x).year if x != "" and x != "None" else replacement_year)
+    # group by timeStamp
+    grouped_temp_df = temp_df.groupby(['timeStamps','category'])['quora_predicted_answers'].apply(lambda x: (x == 0).sum()).to_frame()
+    quora_bar_data = grouped_temp_df.pivot_table(index='timeStamps', columns='category', values='quora_predicted_answers', fill_value=0)
+    # TODO: INCREASE FIGSIZE
+    st.bar_chart(quora_bar_data,color = colors[:len(quora_bar_data.columns)])
 
     sorted_loc_answer_correct = {k: v for k,v in sorted(loc_answer_correct.items(), key=lambda item: item[1], reverse=True)}
     sorted_loc_answer_wrong = dict(sorted(loc_answer_wrong.items(), key=lambda item: item[1], reverse=True)) 
