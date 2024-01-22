@@ -1,0 +1,6 @@
+matplotlib==3.7.1
+plotly==5.9.0
+pandas==1.5.3
+streamlit==1.29.0
+path==16.9.0
+pathlib==1.0.1

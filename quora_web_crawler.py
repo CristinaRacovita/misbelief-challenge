@@ -1,14 +1,17 @@
 from bs4 import BeautifulSoup
+from model.quora_answer import QuoraAnswer
+from processing.location_processing import get_country_from_location_element
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service as ChromeService
 from webdriver_manager.chrome import ChromeDriverManager
 import time
+from processing.time_processing import get_datetime
 
 BASE_URL = "https://www.quora.com"
-QUESTION = "What happens to you if you eat watermelon seeds?"
-PARSER = "html.parser"
-QUORA_QUESTION = 'What happens to the seeds I swallow while eating watermelon?'
-USER_URL = 'https://www.quora.com/profile/Kait-McNeill'
+# QUESTION = "What happens to you if you eat watermelon seeds?"
+# PARSER = "html.parser"
+# QUORA_QUESTION = 'What happens to the seeds I swallow while eating watermelon?'
+# USER_URL = 'https://www.quora.com/profile/Kait-McNeill'
 options = webdriver.ChromeOptions()
 options.add_argument("headless")
 
@@ -23,9 +26,13 @@ def get_quora_questions(question):
     driver.get(url)
     html = BeautifulSoup(driver.page_source, "html.parser")
     result = html.find_all("div", {"class": "q-flex qu-flexDirection--row"})
+    posts = []
     for item in result:
-        print(item.text)
+        if len(posts) > 3:
+            break
+        posts.append(item.text)
     driver.quit()
+    return posts
 
 def get_quora_answers_and_users(question):
     driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
@@ -39,24 +46,39 @@ def get_quora_answers_and_users(question):
     users = html.find_all("a", {"class":"q-box Link___StyledBox-t2xg9c-0 dFkjrQ puppeteer_test_link qu-color--gray_dark qu-cursor--pointer qu-hover--textDecoration--underline"})
     timestamps = html.find_all("a", {"class":"q-box Link___StyledBox-t2xg9c-0 dFkjrQ answer_timestamp qu-cursor--pointer qu-hover--textDecoration--underline"})
     i = 0
+    answers = []
     for comment in comments:
-        print(comment.text)
-        print(users[i]['href'])
-        print(timestamps[i].text)
-        print('--'*10)
-
+        if len(answers) > 3:
+            break
+        if len(answers) > i + 1 and timestamps[i] is None:
+            i+=1
+            continue
+        if len(users) < i + 1:
+            answers.append(QuoraAnswer(comment.text, None, str(get_datetime(timestamps[i].text))))
+        else:
+            answers.append(QuoraAnswer(comment.text, users[i]['href'], str(get_datetime(timestamps[i].text))))
         i+=1
+
     driver.quit()
+    return answers
 
 def get_user_location(profile_url):
+    if profile_url == None:
+        return None
     driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
-    driver.get(profile_url)
+    try:
+        driver.get(profile_url)
+    except:
+        print(profile_url)
     html = BeautifulSoup(driver.page_source, "html.parser")
     locations = html.find_all("div", {"class": "q-text qu-truncateLines--2"})
+    locs = []
     for location in locations:
-        if 'Lived in' in location.text:
-            print(location.text)
+        if 'Lived in' in location.text or 'Lives in' in location.text:
+            locs.append(get_country_from_location_element(location.text))
+            # print(location.text)
     driver.quit()
+    return locs
 
-get_quora_answers_and_users(QUORA_QUESTION)
+# get_quora_answers_and_users(QUORA_QUESTION)
 # get_user_location(USER_URL)
