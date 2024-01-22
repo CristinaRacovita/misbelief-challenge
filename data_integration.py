@@ -34,15 +34,24 @@ def reshape_df(df,df_type) -> pd.DataFrame:
     return result_df
 
 def merge_datasets():
-    reddit_df = load_reddit_answers()
-    quora_df = load_quora_answers()
+    # REDO
+    # Data statistics
+    reddit_df = load_reddit_answers().transpose().reset_index()
+    reddit_mapper = {"answers":"reddit_answers","timeStamps":"reddit_timeStamps"}
+    reddit_df = reddit_df.rename(mapper=reddit_mapper,axis=1)
+    quora_df = load_quora_answers().transpose().reset_index()
+    quora_mapper = {"answers":"quora_answers","timeStamps":"quora_timeStamps"}
+    quora_df = quora_df.rename(mapper=quora_mapper,axis=1)
+    main_df = reddit_df.merge(quora_df[["index","quora_answers","quora_timeStamps","locations"]],how="inner",on="index")
+    main_df = main_df.drop("type",axis=1)
     #main_df = pd.read_json(r"misbelief-challenge\truthful_qa.json")
     # result_df.index = melted_df.index
-    reddit_melted = reshape_df(reddit_df,"reddit")
-    quora_melted = reshape_df(quora_df,"quora")
-    reddit_melted['questions'] = reddit_melted['questions'].astype(str)
-    quora_melted['questions'] = quora_melted['questions'].astype(str)
-    merged_df = reddit_melted.merge(quora_melted,how="inner",on="questions")
-    merged_df.to_json(r"misbelief-challenge\main_df.json",indent=2)
+    # reddit_melted = reshape_df(reddit_df,"reddit")
+    # quora_melted = reshape_df(quora_df,"quora")
+
+    # merged_df = reddit_melted.merge(quora_melted,how="inner",on="questions")
+    
+
+    main_df.to_json(r"misbelief-challenge\main_df.json",indent=4,orient="records")
 
 merge_datasets()

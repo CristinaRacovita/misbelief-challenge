@@ -18,17 +18,15 @@ st.header("Most genius project ever")
     How long do people post questions after the post has been posted?\n
 '''
 @st.cache_data
-def load_data(no_of_files):
-    file_paths = [r"misbelief-challenge/answers/answers_0-20.json",
-                 r"misbelief-challenge/answers/answers_20-40.json"]
+def load_data():
+    file_path = r"misbelief-challenge/main_df.json"
     # get timeStamp data and the answers vector for each question
-    df = pd.concat([pd.read_json(f) for f in file_paths[:no_of_files]],axis=1).T
+    df = pd.read_json(file_path)
     return df
 
 
 def visual_processing():
-    no_of_files = 2
-    df = load_data(no_of_files)
+    df = load_data().transpose()
 
     st.write("Head of main dataframe")
     st.write(df.head())
@@ -58,7 +56,7 @@ def visual_processing():
     st.bar_chart(data=incorrectness)
     st.bar_chart(data=overall)
 
-    st.header(f"Answers distribution (in {no_of_files} files)")
+    st.header(f"Answers distribution (in {2} files)")
     correct_answers = pd.DataFrame(df['predicted_answers'].apply(lambda x: sum(x)).values,
                                    index=df['question'],
                                    columns=["correct answers"]
