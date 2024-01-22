@@ -25,15 +25,14 @@ st.markdown('''
 ''')
 @st.cache_data
 def load_data(no_of_files):
-    file_paths = [r"quora_answers/answers_test.json"]
+    file_path = r"misbelief-challenge\main_df.json"
     # get timeStamp data and the answers vector for each question
-    df = pd.concat([pd.read_json(f) for f in file_paths[:no_of_files]],axis=1).T
+    df = pd.read_json(file_path).transpose()
     return df
 
 
 def visual_processing():
-    no_of_files = 2
-    df = load_data(no_of_files)
+    df = load_data()
     checking_timeStamps_df = df.explode(['timeStamps'])
     locations_and_answers = df[["locations", "predicted_answers"]].to_numpy()
 
@@ -101,7 +100,7 @@ def visual_processing():
     st.write("Overall Accuracy of Models")
     st.bar_chart(data=overall)
 
-    st.subheader(f"Answer Distributions (in {no_of_files} files)")
+    st.subheader(f"Answer Distributions")
     correct_answers = pd.DataFrame(df['predicted_answers'].apply(lambda x: sum(x)).values,
                                    index=df['question'],
                                    columns=["correct answers"]
