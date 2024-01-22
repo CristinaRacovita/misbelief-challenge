@@ -13,7 +13,7 @@ def convert_bin_to_time_interval(bin_range):
 st.header("Misbeliefs Around the World")
 st.markdown('''
     **We analysed the most popular misbelif answers from Quora and Reddit. 
-    We used the TruthfulQA dataset, where we had top superstitions in the world and a web crawler to retrive people's answers from two known forum websites.**
+    We used the [TruthfulQA](https://huggingface.co/datasets/truthful_qa) dataset, where we had top superstitions in the world and a web crawler to retrive people's answers from two known forum websites.**
 ''')
 st.markdown('''
     **Business questions:**
@@ -56,7 +56,7 @@ def visual_processing():
                 loc_answer_wrong[location] += 1
 
     st.write("**How do our final data look?**")
-    st.write(df.iloc[:df.shape[0],:5])
+    st.write(df.head())
 
     st.markdown(f'''
         **Data Statistics**
