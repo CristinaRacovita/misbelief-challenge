@@ -216,7 +216,8 @@ def visual_processing():
     grouped_temp_df = temp_df.groupby(['timeStamps','category'])['reddit_predicted_answers'].apply(lambda x: (x == 0).sum()).to_frame()
     reddit_bar_data = grouped_temp_df.pivot_table(index='timeStamps', columns='category', values='reddit_predicted_answers', fill_value=0)
     # TODO: INCREASE FIGSIZE
-    st.bar_chart(reddit_bar_data,color = COLORS[:len(reddit_bar_data.columns)])
+
+    #st.bar_chart(reddit_bar_data,color = COLORS[:len(reddit_bar_data.columns)])
 
     # Popular misbeliefs from quora based on timestamp year by category
     st.subheader("Popular misbelief from **quora** based on timestamp year by category")
@@ -227,7 +228,13 @@ def visual_processing():
     grouped_temp_df = temp_df.groupby(['timeStamps','category'])['quora_predicted_answers'].apply(lambda x: (x == 0).sum()).to_frame()
     quora_bar_data = grouped_temp_df.pivot_table(index='timeStamps', columns='category', values='quora_predicted_answers', fill_value=0)
     # TODO: INCREASE FIGSIZE
-    st.bar_chart(quora_bar_data,color = COLORS[:len(quora_bar_data.columns)])
+    #st.bar_chart(quora_bar_data,color = COLORS[:len(quora_bar_data.columns)])
+    all_categories = list(set(reddit_bar_data.columns) | set(quora_bar_data.columns))
+
+    # Create a color mapping dictionary
+    color_mapping = {category: COLORS[i % len(COLORS)] for i, category in enumerate(all_categories)}
+    st.bar_chart(reddit_bar_data, color=[color_mapping[category] for category in reddit_bar_data.columns])
+    st.bar_chart(quora_bar_data, color=[color_mapping[category] for category in quora_bar_data.columns])
 
     sorted_loc_answer_correct = {k: v for k,v in sorted(loc_answer_correct.items(), key=lambda item: item[1], reverse=True)}
     sorted_loc_answer_wrong = dict(sorted(loc_answer_wrong.items(), key=lambda item: item[1], reverse=True)) 
