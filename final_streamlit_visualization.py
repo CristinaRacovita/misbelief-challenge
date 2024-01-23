@@ -7,8 +7,10 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import numpy as np
+import random
 
 COLORS = ['#1f78b4', '#33a02c', '#e31a1c', '#ff7f00', '#6a3d9a', '#a6cee3', '#b2df8a', '#fb9a99', '#fdbf6f', '#cab2d6']
+random.shuffle(COLORS)
 
 st.header("Misbeliefs Around the World")
 st.markdown('''
@@ -236,7 +238,7 @@ def visual_processing():
 
     
     # Popular misbeliefs from reddit based on timestamp year by category
-    st.subheader("Popular misbelief from **reddit** based on timestamp year by category")
+    
     temp_df = df.explode(['reddit_predicted_answers','reddit_timeStamps'])
     replacement_year = pd.to_datetime("2020-10-27T14:13:12.111Z").year # need a better way to do this 
     temp_df['timeStamps'] = temp_df['reddit_timeStamps'].apply(lambda x: pd.to_datetime(x).year if x != "" and x != "None" else replacement_year)
@@ -244,10 +246,10 @@ def visual_processing():
     grouped_temp_df = temp_df.groupby(['timeStamps','category'])['reddit_predicted_answers'].apply(lambda x: (x == 0).sum()).to_frame()
     reddit_bar_data = grouped_temp_df.pivot_table(index='timeStamps', columns='category', values='reddit_predicted_answers', fill_value=0)
     # TODO: INCREASE FIGSIZE
-    st.bar_chart(reddit_bar_data,color = COLORS[:len(reddit_bar_data.columns)])
+    #st.bar_chart(reddit_bar_data,color = COLORS[:len(reddit_bar_data.columns)])
 
     # Popular misbeliefs from quora based on timestamp year by category
-    st.subheader("Popular misbelief from **quora** based on timestamp year by category")
+    
     temp_df = df.explode(['quora_predicted_answers','quora_timeStamps'])
     replacement_year = pd.to_datetime("2020-10-27T14:13:12.111Z").year # need a better way to do this 
     temp_df['timeStamps'] = temp_df['quora_timeStamps'].apply(lambda x: pd.to_datetime(x).year if x != "" and x != "None" else replacement_year)
@@ -255,7 +257,15 @@ def visual_processing():
     grouped_temp_df = temp_df.groupby(['timeStamps','category'])['quora_predicted_answers'].apply(lambda x: (x == 0).sum()).to_frame()
     quora_bar_data = grouped_temp_df.pivot_table(index='timeStamps', columns='category', values='quora_predicted_answers', fill_value=0)
     # TODO: INCREASE FIGSIZE
-    st.bar_chart(quora_bar_data,color = COLORS[:len(quora_bar_data.columns)])
+    #st.bar_chart(quora_bar_data,color = COLORS[:len(quora_bar_data.columns)])
+    all_categories = list(set(reddit_bar_data.columns) | set(quora_bar_data.columns))
+
+    # Create a color mapping dictionary
+    color_mapping = {category: COLORS[i % len(COLORS)] for i, category in enumerate(all_categories)}
+    st.subheader("Popular misbelief from **reddit** based on timestamp year by category")
+    st.bar_chart(reddit_bar_data, color=[color_mapping[category] for category in reddit_bar_data.columns])
+    st.subheader("Popular misbelief from **quora** based on timestamp year by category")
+    st.bar_chart(quora_bar_data, color=[color_mapping[category] for category in quora_bar_data.columns])
 
     sorted_loc_answer_correct = {k: v for k,v in sorted(loc_answer_correct.items(), key=lambda item: item[1], reverse=True)}
     sorted_loc_answer_wrong = dict(sorted(loc_answer_wrong.items(), key=lambda item: item[1], reverse=True)) 
